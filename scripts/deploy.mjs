@@ -5,6 +5,7 @@
 //       node scripts/deploy.mjs --remote git@github.com:UPraggy/PlantaFacil.git [--cname planta.rafaelmr.com.br] [--dry]
 // As opções também podem ficar em deploy.config.json: { "remote": "...", "cname": "", "branch": "gh-pages" }
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,6 +60,14 @@ if (existe) {
 for (const nome of readdirSync(DIR)) if (nome !== '.git') rmSync(join(DIR, nome), { recursive: true, force: true });
 for (const a of ARQUIVOS) cpSync(join(RAIZ, a), join(DIR, a), { recursive: true });
 writeFileSync(join(DIR, '404.html'), readFileSync(join(RAIZ, '404.html'), 'utf8').replaceAll('__BASE__', base));
+
+// Carimbo de versão: style.css e js/*.js ganham ?v=<hash do conteúdo>. O GitHub Pages manda o navegador guardar
+// os arquivos por 10 min; sem isso, um index.html antigo poderia rodar com um app.js novo (ou o contrário).
+const hash = arq => createHash('sha1').update(readFileSync(join(DIR, arq))).digest('hex').slice(0, 10);
+for (const pagina of ['index.html', '404.html']) {
+  const caminho = join(DIR, pagina);
+  writeFileSync(caminho, readFileSync(caminho, 'utf8').replace(/(src|href)="((?:js\/[\w-]+\.js)|style\.css)"/g, (_, attr, arq) => `${attr}="${arq}?v=${hash(arq)}"`));
+}
 writeFileSync(join(DIR, '.nojekyll'), '');
 if (cname) writeFileSync(join(DIR, 'CNAME'), cname + '\n');
 

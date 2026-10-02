@@ -34,6 +34,7 @@ O que ele faz:
 1. Clona o `gh-pages` existente, ou cria um órfão se for a primeira vez.
 2. Apaga tudo menos o `.git` e copia `index.html`, `style.css` e `js/`.
 3. Grava o `404.html` com o caminho-base certo, o `.nojekyll` e o `CNAME`.
+   - **Carimbo de versão:** no `index.html` e no `404.html` publicados, `style.css` e `js/*.js` ganham `?v=<hash do conteúdo>`. O GitHub Pages manda o navegador guardar os arquivos por 10 minutos, e sem o carimbo um HTML antigo poderia rodar com um JS novo. O código-fonte não tem carimbo; o `serve.mjs` ignora a query.
 4. Só commita se algo mudou ("Nada mudou desde a última publicação"), e então dá push. A mensagem é `deploy: Planta fácil AAAA-MM-DD HH:MM`, sem coautor.
 
 O GitHub leva de 1 a 2 minutos para atualizar. A Cloudflare pode guardar a versão anterior por alguns minutos.
