@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planta fácil</title>
+<meta name="description" content="Desenhe plantas com andares, cômodos, paredes e móveis, com as medidas e as folgas na tela. Tudo salvo no seu navegador.">
+<meta name="theme-color" content="#11131C">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2311131C'/%3E%3Cpath d='M7 25V7h18v18z' fill='none' stroke='%239DB1EA' stroke-width='2'/%3E%3Cpath d='M7 17h9v8' fill='none' stroke='%23EAA94E' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  (function () {
+    var t = 'escuro';
+    try {
+      var p = localStorage.getItem('plantafacil:tema') || 'auto';
+      t = p === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') : p;
+    } catch (e) { /* sem armazenamento */ }
+    document.documentElement.dataset.tema = t;
+  })();
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V5"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+</svg>
+
+<div id="app">
+  <header id="topo">
+    <button id="btnProjetos" class="projeto" type="button" aria-label="Meus projetos" title="Meus projetos">
+      <svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>
+      <span><small class="rot">Projeto</small><strong id="nomeProjeto"></strong></span>
+    </button>
+    <div class="acoes">
+      <button class="icone" id="btnDesfazer" type="button" aria-label="Desfazer" title="Desfazer (Ctrl+Z)" disabled><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg></button>
+      <button class="icone" id="btnRefazer" type="button" aria-label="Refazer" title="Refazer (Ctrl+Y)" disabled><svg class="ic" aria-hidden="true"><use href="#i-redo"/></svg></button>
+      <button class="icone" id="btnExportar" type="button" aria-label="Compartilhar e exportar" title="Compartilhar e exportar"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg></button>
+      <button class="icone" id="btnAjustes" type="button" aria-label="Ajustes" title="Ajustes"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg></button>
+    </div>
+  </header>
+
+  <nav id="andares" aria-label="Andares"></nav>
+
+  <main id="palco">
+    <svg id="tela" role="img" aria-label="Planta"><g id="mundo"></g></svg>
+
+    <div id="ver" role="group" aria-label="O que mostrar na planta">
+      <button type="button" data-ver="medidas" aria-pressed="true" title="Mostrar largura × profundidade dentro dos itens">Medidas</button>
+      <button type="button" data-ver="folgas" aria-pressed="false" title="Mostrar a folga entre todos os itens">Folgas</button>
+      <button type="button" data-ver="total" aria-pressed="false" title="Mostrar a medida total da planta">Total</button>
+    </div>
+
+    <div id="vazio" hidden>
+      <svg class="vazio-desenho" viewBox="0 0 200 120" aria-hidden="true">
+        <rect class="vz-parede" x="20" y="14" width="160" height="92" rx="2"/>
+        <rect class="vz-item" x="104" y="26" width="62" height="34" rx="3"/>
+        <path class="vz-cota" d="M104 70H166M104 66v8M166 66v8"/>
+      </svg>
+      <strong>Comece pelo cômodo</strong>
+      <span>Digite as medidas e depois adicione os móveis dentro dele.</span>
+      <button id="btnPrimeiro" class="btn primario" type="button"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Criar cômodo</button>
+    </div>
+
+    <div class="cantos-esq">
+      <div id="escala" class="escala" aria-hidden="true"><i id="escalaBarra"></i><span id="escalaTxt">1 m</span></div>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button id="btnMenos" class="icone" type="button" aria-label="Afastar" title="Afastar (−)"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
+        <button id="btnAjustar" class="icone" type="button" aria-label="Ajustar à tela" title="Ajustar à tela"><svg class="ic" aria-hidden="true"><use href="#i-fit"/></svg></button>
+        <button id="btnMais" class="icone" type="button" aria-label="Aproximar" title="Aproximar (+)"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+      </div>
+    </div>
+    <button id="btnAdd" class="fab" type="button" title="Adicionar (N)"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span>Adicionar</span></button>
+  </main>
+
+  <section id="painel" class="compacto" hidden aria-label="Item selecionado">
+    <button class="pegador" id="pPegador" type="button" aria-label="Mostrar ou esconder mais ajustes"></button>
+    <div class="painel-int">
+      <div class="linha-nome">
+        <span class="ponto-cor" id="pPonto" aria-hidden="true"></span>
+        <label class="nome-campo">
+          <small class="rot" id="pTipoTxt">Item</small>
+          <input id="pNome" type="text" maxlength="60" autocomplete="off" placeholder="Dê um nome" aria-label="Nome">
+        </label>
+        <button class="btn primario ok" id="pFechar" type="button"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>OK</button>
+      </div>
+
+      <div class="medidas">
+        <label class="campo-num"><span class="rot" id="pRotW">Largura</span>
+          <span class="stepper">
+            <button type="button" class="passo" data-campo="w" data-passo="-" aria-label="Diminuir largura">−</button>
+            <span class="campo"><input id="pW" type="text" inputmode="decimal" autocomplete="off" aria-label="Largura em centímetros"><i>cm</i></span>
+            <button type="button" class="passo" data-campo="w" data-passo="+" aria-label="Aumentar largura">+</button>
+          </span>
+        </label>
+        <button class="icone girar" id="pGirar" type="button" aria-label="Girar 90 graus" title="Girar 90°"><svg class="ic" aria-hidden="true"><use href="#i-rotate"/></svg></button>
+        <label class="campo-num"><span class="rot" id="pRotH">Profundidade</span>
+          <span class="stepper">
+            <button type="button" class="passo" data-campo="h" data-passo="-" aria-label="Diminuir profundidade">−</button>
+            <span class="campo"><input id="pH" type="text" inputmode="decimal" autocomplete="off" aria-label="Profundidade em centímetros"><i>cm</i></span>
+            <button type="button" class="passo" data-campo="h" data-passo="+" aria-label="Aumentar profundidade">+</button>
+          </span>
+        </label>
+      </div>
+
+      <div id="pDist" class="bloco distancias extra" hidden>
+        <p class="rot">Distância até <b id="pDistNome"></b></p>
+        <div class="cruz">
+          <span class="campo c"><input id="dC" type="text" inputmode="decimal" autocomplete="off" aria-label="Distância em cima, em centímetros"><i>cm</i></span>
+          <span class="campo e"><input id="dE" type="text" inputmode="decimal" autocomplete="off" aria-label="Distância à esquerda, em centímetros"><i>cm</i></span>
+          <span class="miolo" id="pDistItem"></span>
+          <span class="campo d"><input id="dD" type="text" inputmode="decimal" autocomplete="off" aria-label="Distância à direita, em centímetros"><i>cm</i></span>
+          <span class="campo b"><input id="dB" type="text" inputmode="decimal" autocomplete="off" aria-label="Distância embaixo, em centímetros"><i>cm</i></span>
+        </div>
+      </div>
+
+      <div id="pParedes" class="bloco extra" hidden>
+        <p class="rot">Paredes ao redor</p>
+        <div class="seg" id="pParedesSeg" role="group" aria-label="Espessura das paredes"></div>
+      </div>
+
+      <div id="pCoresBloco" class="bloco extra">
+        <p class="rot">Cor</p>
+        <div class="cores" id="pCores" role="group" aria-label="Cor"></div>
+      </div>
+
+      <div class="bloco extra">
+        <p class="rot">Textura</p>
+        <div class="amostras" id="pTexturas" role="group" aria-label="Textura"></div>
+      </div>
+
+      <details class="mais extra">
+        <summary>Mais opções</summary>
+        <div class="bloco">
+          <p class="rot">Tipo</p>
+          <div class="seg" id="pTipo" role="group" aria-label="Tipo">
+            <button type="button" data-tipo="item">Item</button>
+            <button type="button" data-tipo="comodo">Cômodo</button>
+            <button type="button" data-tipo="parede">Parede</button>
+          </div>
+        </div>
+        <div class="bloco" id="pIconesBloco">
+          <p class="rot">Ícone (vista de cima)</p>
+          <div class="amostras rolar" id="pIcones" role="group" aria-label="Ícone"></div>
+        </div>
+      </details>
+
+      <div class="acoes-item">
+        <button class="btn" id="pExpandir" type="button" aria-expanded="false"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg><span>Ajustes</span></button>
+        <button class="btn" id="pDup" type="button"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg>Duplicar</button>
+        <button class="btn perigo" id="pDel" type="button"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>Excluir</button>
+      </div>
+      <p class="nota extra" id="pDica"></p>
+    </div>
+  </section>
+</div>
+
+<div id="camada" hidden></div>
+<div id="aviso" role="status" aria-live="polite" hidden></div>
+<input id="arq" type="file" accept=".json,application/json" aria-label="Arquivo de projeto para importar" hidden>
+
+<script src="js/dados.js"></script>
+<script src="js/desenho.js"></script>
+<script src="js/exportar.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
