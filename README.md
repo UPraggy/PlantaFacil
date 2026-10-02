@@ -1,5 +1,7 @@
 # Planta fácil
 
+**No ar:** https://plantafacil.rafaelmr.com.br (também em https://upraggy.github.io/PlantaFacil/, que redireciona)
+
 Site para desenhar plantas no celular ou no computador. Você cria andares, cômodos, paredes e itens com as medidas que quiser, e vê na hora quanto sobra entre tudo, no estilo das cotas de projeto.
 
 É só HTML, CSS e JS, sem build nem dependências. Os dados ficam no `localStorage` do navegador.
@@ -57,7 +59,7 @@ node scripts/deploy.mjs --remote git@github.com:UPraggy/PlantaFacil.git --cname 
 - **Sem repetir opções:** guarde-as em `deploy.config.json` (`{ "remote": "...", "cname": "" }`) e rode só `npm run deploy`. Se a pasta já for um repositório git, ele usa o `origin`.
 - **Ensaio:** `--dry` monta tudo em `.cache/gh-pages` sem enviar.
 - **Primeira vez:** no GitHub, *Settings › Pages › Deploy from a branch › gh-pages / (root)*.
-- **Domínio próprio:** crie um registro DNS `CNAME` apontando para `upraggy.github.io`.
+- **Domínio próprio:** crie um registro DNS `CNAME` apontando para `upraggy.github.io`. Hoje o `deploy.config.json` já publica com `plantafacil.rafaelmr.com.br`, e o DNS fica na Cloudflare (proxy ligado, igual ao `lnoffice`).
 - **404:** o script troca o `__BASE__` do `404.html` pelo caminho certo, `/PlantaFacil/` ou `/` com domínio.
 
 ## Organização
