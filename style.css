@@ -105,6 +105,13 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 #ver .trava .ic { width: 15px; height: 15px; }
 #ver .trava[aria-pressed='true'] { background: color-mix(in srgb, var(--acento) 14%, var(--bg2)); }
 .cadeado[aria-pressed='true'] { color: var(--acento); background: color-mix(in srgb, var(--acento) 12%, transparent); }
+#painel.so-leitura .nota#pDica { color: var(--acento); font-weight: 500; }
+#painel.so-leitura .medidas, #painel.so-leitura .bloco, #painel.so-leitura details.mais, #painel.so-leitura .acoes-item { opacity: .45; }
+#painel.so-leitura .pegador { opacity: 1; }
+.aviso-trava { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--acento) 45%, transparent);
+  border-radius: 12px; background: color-mix(in srgb, var(--acento) 10%, transparent); color: var(--acento); font-size: 13.5px; animation: subir var(--motion-base) var(--ease-decelerate); }
+.aviso-trava .ic { width: 18px; height: 18px; }
+#palco.travado .fab { display: none; }
 #palco.travado #tela { cursor: grab; }
 .aberturas { display: grid; gap: 8px; }
 .aberturas:empty::before { content: 'Nenhuma ainda. Use os botões abaixo.'; font-size: 12.5px; color: var(--fg3); }
@@ -175,6 +182,7 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 
 /* editor de paredes do cômodo: os quatro lados são botões */
 .paredes-editor { display: flex; gap: 14px; align-items: center; }
+.destaque-paredes { border: 1px solid var(--linha2); border-radius: 14px; padding: 10px 12px; background: color-mix(in srgb, var(--parede) 6%, transparent); }
 .paredes-lado { flex: 1; min-width: 0; display: grid; gap: 6px; }
 .paredes-resumo { font-size: 13px; color: var(--fg2); }
 .dica-rot { text-transform: none; letter-spacing: 0; font: 400 11px var(--display); color: var(--fg3); margin-left: 4px; }
@@ -265,7 +273,12 @@ body.arrastando::after {
 @media (max-width: 899px) {
   #painel.compacto .extra { display: none !important; }
   #painel:not(.compacto) .extra { animation: subir var(--motion-base) var(--ease-decelerate) both; }
-  #app:has(#painel:not([hidden])) .fab, #app:has(#painel:not([hidden])) .escala { display: none; }
+  /* com o painel aberto, o Adicionar vira um "+" redondo (dá para pôr item dentro do cômodo selecionado) */
+  #app:has(#painel:not([hidden])) .fab { width: 52px; min-height: 52px; padding: 0; }
+  #app:has(#painel:not([hidden])) .fab span, #app:has(#painel:not([hidden])) .escala { display: none; }
+  #app:has(#painel:not([hidden])) #ver button:not(.trava) { display: none; }
+  #app:has(#painel:not([hidden])) ~ #aviso { top: calc(env(safe-area-inset-top) + 116px); bottom: auto; }
+  .form-novo .nota-medidas { margin-top: -8px; }
 }
 
 /* ---------- telas maiores: painel vira coluna lateral ---------- */

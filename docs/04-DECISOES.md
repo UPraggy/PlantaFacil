@@ -46,6 +46,9 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
 | 02/10 | "adicionar vazamento nos cômodos como se fosse janelas" | Aberturas nas paredes: janela, porta (com arco) e vão |
 | 02/10 | "editar o que está na frente" | Trazer para frente / enviar para trás + tocar de novo pega o de trás |
 | 02/10 | "bloquear edição para não mover sem querer" | Cadeado por item + "Travar" na planta inteira |
+| 02/10 | "não achei quadrado para editar as paredes"; "o trancar não funciona" | Editor de paredes sempre à vista no cômodo; tocar no miolo seleciona; travado = não move nem edita |
+| 02/10 | "teste no celular… pode ser no navegador, basta usar o inspecionar" | `npm run e2e`: Chromium emulando Android com toque de verdade |
+| 02/10 | "melhore a exportação… visibilidade das medidas, o PDF também"; "não precisa crescer tanto a imagem, só boa resolução, e legenda de proporção" | Medidas 1,2×, PNG 3× e PDF 2,5× de resolução, régua + proporção 1:N, lista de medidas no PDF |
 
 ## Decisões técnicas (e o motivo)
 
@@ -59,7 +62,12 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
 - **Cômodo com paredes integradas** (rodada 3): na rodada 2, o "cômodo com paredes" criava 4 paredes soltas que não acompanhavam o redimensionamento. Agora `parede` é a espessura em volta do vão livre. Paredes soltas continuam existindo para divisórias e para dar nome a uma parede específica.
 - **Cotas relativas ao recipiente:** o desenho do cooktop mede da bancada, não do mundo. `recipiente()` acha o menor cômodo ou item que contém o selecionado. Por isso o cooktop mede até a bancada, e a bancada até a cozinha.
 - **Distâncias no lugar de X/Y:** ninguém pensa "x = 115"; pensa "10 cm da parede".
-- **Travado bloqueia só o arrastar:** o que muda sem querer é o dedo na planta, não um número digitado. Por isso o painel continua editável no item travado, e o arrastar em cima dele move a vista, o que é útil no celular para andar pela planta sem tirar o cômodo do lugar.
+- **Travado bloqueia tudo (revisto em 02/10):**
+  - Na primeira versão, travado só impedia arrastar o item e o dedo movia a vista. No celular isso parece o item saindo do lugar ("o trancar não funciona"), e o painel seguia editável, contra o "bloquear edição" que ele pediu.
+  - Agora o item travado não muda: arrastar só faz tremer e avisar, e o painel fica só leitura.
+  - Para andar pela planta: arrastar no vazio, ou dois dedos.
+- **PNG em alta resolução, sem lista; lista só no PDF:** ele pediu para a imagem não crescer. O PNG a 3× deixa dar zoom nas medidas, e a lista, que deixaria a imagem comprida, ganhou página própria no PDF.
+- **Proporção 1:N só no PDF:** a folha A4 impressa a 100% tem tamanho fixo, e o PNG não. No PNG a régua é a legenda de proporção.
 - **Girar o cômodo leva o conteúdo:** girar só a caixa do cômodo deixaria os móveis do lado de fora. Quem quer girar um móvel sozinho seleciona o móvel.
 - **Uma espessura para todas as paredes do cômodo:** cobre o caso comum com uma escolha só. Uma parede diferente pode ser uma parede solta.
 - **PDF escrito à mão (JPEG por página):** sem biblioteca externa (jsPDF via CDN quebraria offline e é mais uma dependência). O custo é o PDF ser imagem, não vetor.

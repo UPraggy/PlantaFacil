@@ -137,7 +137,14 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
   - **Toque sem mover:** no vazio desseleciona, no item seleciona.
   - **Toque de novo no selecionado** com outros itens sob o dedo (`itensEm` lista da frente para trás): depois de 330 ms, se não veio o segundo toque do toque duplo, passa para o próximo da lista (`gesto.ciclo`).
   - **O selecionado é o arrastado** se estiver sob o dedo, mesmo atrás de outro.
-  - **Travado** (`travado(i)` = `config.travado` ou `i.travado`): o toque seleciona, mas o gesto vira `pan`. Sem alças, as setas não movem e o Delete pede para destravar.
+  - **Travado** (`travado(i)` = `config.travado` ou `i.travado`):
+    - o toque seleciona; arrastar vira o gesto `travado`, que **não move nada**, nem a vista, e só chama `tremer()`, `vibrar()` e `avisoTravado()`;
+    - sem alças; o painel ganha a classe `so-leitura`, com todos os campos e botões desabilitados menos cadeado, OK e Ajustes;
+    - girar, duplicar, Delete, setas e N (com a planta travada) são bloqueados;
+    - o cadeadinho é desenhado por `cadeadoSVG` só com `o.cadeados` (tela).
+  - **Miolo do cômodo:** tocar no vazio dentro de um cômodo (`comodoNoToque`) seleciona o menor cômodo sob o dedo.
+- **Enquadramento:** `MARGENS` em pixels. `vistaPara(caixa, margens, zMax)` aceita margens por lado. `enquadrarSelecao()` roda ao tocar, ao redimensionar (painel abrindo) e no fim de um arrasto, se ficou pendente: se o recipiente do selecionado não cabe, enquadra; se só está para fora, desliza.
+- **Aba em segundo plano:** `agendar()` usa `setTimeout` quando `document.hidden`, porque o rAF pausa. Animações só seguem com a aba visível.
   - **Dois toques em menos de 320 ms e 28 px:** `toqueDuplo` aproxima até o item, ou 2× no ponto.
   - **Roda do mouse:** zoom em volta do cursor (com `Ctrl`, mais rápido).
 - **O que dá para pegar (`itemEm`):** itens primeiro, depois paredes, depois cômodos.
@@ -166,11 +173,18 @@ Os efeitos de JS entram em `renderizar`, que segue pedindo quadros enquanto houv
 
 ## Exportação (`js/exportar.js`)
 
-- **`paginaSVG(proj, andar, { W, H, escala, pagina, total, selId })`:** página completa com título, data, planta, legenda e escala. A planta cabe na área com 100 px de respiro em volta, para as cotas.
-- **PNG:** 1200 px lógicos de largura e altura proporcional (entre 560 e 1800), desenhados a 2×. O resultado tem cerca de 2400 px.
+- **`paginaSVG(proj, andar, { W, H, escala, pagina, total, selId })`:** página completa com título, data, planta, legenda e régua. A planta cabe na área com 135 px de respiro em volta, para as cotas.
+- **Medidas maiores:** o desenho é chamado com `z: k / AMPLIA` (`AMPLIA = 1,2`), então textos, traços e cotas saem 1,2× maiores sem mexer na geometria.
+- **Legenda de proporção (`reguaSVG`):** régua de 10 cm a 100 m, escolhida para dar pelo menos 60 px. No PDF leva também "proporção 1:N (A4 a 100%)"; no PNG, "escala".
+- **Lista de medidas:**
+  - `linhasMedidas(andar)` monta as linhas: cômodos ordenados (área, paredes, aberturas), os itens dentro de cada recipiente (recursivo, com ← → ↑ ↓ até ele) e os que estão fora.
+  - `listaSVG` desenha, e `paginaListaSVG` é a página A4 em pé só com a lista.
+  - Vai só no PDF, quando `config.lista` está ligado.
+- **PNG:** 1200 px lógicos de largura e altura proporcional (entre 560 e 1800), desenhados a 3× (`DENSIDADE_PNG`). O resultado tem cerca de 3600 px.
 - **PDF:**
   - uma página A4 por andar, deitada se a planta for mais larga;
-  - cada página é desenhada a 2×, vira JPEG (qualidade 0,92) e entra no PDF;
+  - a ordem das páginas: a planta de cada andar e, em seguida, as páginas da lista dele (`porPagina` linhas cada);
+  - cada página é desenhada a 2,5× (`DENSIDADE_PDF`), vira JPEG (qualidade 0,9) e entra no PDF;
   - o `montarPDF` escreve o arquivo à mão: catálogo, páginas, `XObject` `DCTDecode` e `xref` com linhas de 20 bytes. O teste confere os offsets.
   - A escala impressa é `1:N` com N = 37,795 / k (96 dpi), arredondado de 5 em 5 ou de 10 em 10.
 - **Fontes:** SVG desenhado como imagem **não carrega web fonts**, então PNG e PDF saem com a fonte do sistema.

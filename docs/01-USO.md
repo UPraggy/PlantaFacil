@@ -26,7 +26,7 @@ Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no com
 
 | Quero… | Como |
 |---|---|
-| Selecionar | Toque no item. Um cômodo se seleciona pela parede, pela borda ou pelo nome; o miolo fica livre para os itens. |
+| Selecionar | Toque no item. Um cômodo se seleciona tocando no meio dele (no espaço vazio), na parede ou no nome. Arrastar no meio do cômodo move a vista, não o cômodo. |
 | Mover | Arraste o item. Ele encaixa de 5 em 5 cm (ou 1 ou 10, em Ajustes) e gruda nas bordas dos outros (ímã). |
 | Mudar o tamanho | Arraste as bolinhas nos cantos e lados, ou use − e + em Largura e Profundidade (segurando, repete). |
 | Posicionar exato | No painel, **Distância até…**: digite quanto quer de cada lado. Ex.: 10 em cima e 8 embaixo. |
@@ -34,7 +34,7 @@ Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no com
 | Paredes do cômodo | No painel do cômodo, **Paredes**: toque num lado para ligar ou desligar e escolha a espessura. O lado sem parede aparece tracejado. |
 | Janela, porta ou vão | No painel do cômodo, **Janelas, portas e vãos** › **+ Janela**, **+ Porta** ou **+ Vão**. Para cada uma: tipo, em qual parede, distância do canto e largura. A porta mostra o arco de abrir para dentro. |
 | Quem fica na frente | Quando um item está em cima do outro, **toque de novo no mesmo lugar** para pegar o de trás. Ou use **Mais opções › Trazer para frente / Enviar para trás**. O item selecionado dá para arrastar mesmo se outro estiver por cima. |
-| Não mexer sem querer | **Cadeado** ao lado do nome: o item travado não sai do lugar ao arrastar (o dedo move só a vista). **Travar**, no alto da planta, trava tudo de uma vez. Pelo painel ainda dá para mudar as medidas. |
+| Não mexer sem querer | **Cadeado** ao lado do nome: o item travado não muda de jeito nenhum. Arrastar não move (ele só treme e avisa), e o painel fica só para ler. Um cadeadinho aparece nele na planta. **Travar**, no alto da planta, deixa tudo só para ver. Para andar pela planta, arraste no espaço vazio ou use dois dedos. |
 | Renomear | Campo do nome no painel. |
 | Cor e textura | No painel, **Cor** e **Textura** (liso, rachura, rachura cruzada, pontilhado, linhas, tijolo). |
 | Ícone de móvel | No painel, **Mais opções › Ícone** (cooktop, pia, cama, sofá…, vistos de cima). Ali também se troca o tipo (item, cômodo, parede). |
@@ -76,8 +76,8 @@ Botão de compartilhar no topo (seta para cima):
 | Opção | Para quê |
 |---|---|
 | **Copiar link** (ou **Enviar**, no celular) | Manda o projeto inteiro dentro do link. Quem abre recebe uma **cópia** nos projetos dele, e nada passa por servidor. |
-| **Imagem (PNG)** | O andar atual, com título e legenda. Se houver item selecionado, leva as cotas dele, como no desenho do cooktop. |
-| **PDF** | Todos os andares, um por página em A4, com escala (vale impresso a 100%). |
+| **Imagem (PNG)** | O andar atual em alta resolução (dá para dar zoom e ler as medidas), com título, legenda e régua de escala. Se houver item selecionado, leva as cotas dele, como no desenho do cooktop. |
+| **PDF** | A planta de cada andar numa página A4, com a régua e a proporção 1:N (vale impresso a 100%). Em seguida vem a **lista de medidas** do andar: cada cômodo, janela, porta e item, com as distâncias até as paredes. Ligue ou desligue a lista em "Mostrar nos arquivos". |
 | **Arquivo do projeto (.json)** | Guardar ou levar para outro aparelho. Importe pelo mesmo menu ou arraste o arquivo para a página. |
 | **Backup de tudo** | Todos os projetos num arquivo só. |
 

@@ -63,6 +63,14 @@ const jan = D.novaAbertura(quarto, 'janela');
 ok(jan.lado === 'c' && jan.larg === 120 && jan.pos === 90 && jan.tipo === 'janela', 'janela nova centrada na parede de cima');
 ok(D.novaAbertura(it('comodo', 'x', 0, 0, 100, 100, { parede: 0 }), 'porta') === null, 'sem parede não tem abertura');
 ok(D.novaAbertura(it('comodo', 'x', 0, 0, 60, 300, { parede: 15, lados: 'e' }), 'porta').lado === 'e', 'usa o primeiro lado com parede');
+// a segunda abertura procura um trecho livre (não cai em cima da janela)
+const q2 = it('comodo', 'q2', 0, 0, 300, 250, { parede: 15, lados: 'cdbe', aberturas: [jan] });
+const p2 = D.novaAbertura(q2, 'porta');
+ok(p2.lado === 'b' && p2.pos === 110, 'sem espaço em cima (70 cm de cada lado), a porta vai para a parede de baixo, centrada');
+q2.aberturas.push(p2);
+q2.aberturas.push(D.novaAbertura(q2, 'porta'));
+const sobrep = (a, b) => a.lado === b.lado && a.pos < b.pos + b.larg && b.pos < a.pos + a.larg;
+ok(q2.aberturas.every((a, k) => q2.aberturas.every((b, j) => j === k || !sobrep(a, b))), 'três aberturas sem sobreposição');
 quarto.aberturas = [jan, { id: 'p1', lado: 'e', pos: 20, larg: 80, tipo: 'porta' }];
 const no = DES.aberturasNoLado(quarto, 'c');
 ok(no.length === 1 && no[0].g0 === 90 && no[0].g1 === 210, 'posição absoluta da janela');
@@ -85,6 +93,31 @@ ok(jan.lado === 'c' && jan.pos === 90 && porta.lado === 'e' && porta.pos === 20,
 const tr = D.limparProjeto({ config: { travado: 1 }, andares: [{ itens: [{ tipo: 'item', travado: 'sim' }] }] }, false);
 ok(tr.config.travado === true && tr.andares[0].itens[0].travado === true, 'travado da planta e do item');
 ok(D.novoProjeto('x').config.travado === false, 'projeto novo começa destravado');
+
+// --- exportação: lista de medidas, legenda de proporção, cadeado só na tela
+const coz = it('comodo', 'Cozinha', 0, 0, 300, 250, { parede: 15, lados: 'cdb', aberturas: [{ id: 'j', lado: 'c', pos: 90, larg: 120, tipo: 'janela' }] });
+const banc = it('item', 'Bancada', 105, 95, 95, 63);
+const cook = it('item', 'Cooktop', 115, 105, 75, 45, { travado: true });
+const fora2 = it('item', 'Vaso', 400, 0, 40, 70);
+const andarX = { nome: 'Térreo', itens: [coz, banc, cook, fora2] };
+const L = EX.linhasMedidas(andarX);
+ok(L[0].nome === 'Cozinha' && L[0].nivel === 0 && L[0].medida === '300 × 250 cm · 7,5 m²' && L[0].detalhe === 'paredes de 15 cm — cima, direita, baixo', 'lista: cômodo com área e paredes');
+ok(L[1].nome === 'Janela' && L[1].detalhe === 'parede de cima, a 90 cm da esquerda', 'lista: abertura');
+ok(L[2].nome === 'Bancada' && L[2].nivel === 1 && L[2].detalhe.startsWith('← 105 · → 100 · ↑ 95 · ↓ 92 cm (até Cozinha)'), 'lista: bancada com distâncias até a cozinha');
+ok(L[3].nome === 'Cooktop' && L[3].nivel === 2 && L[3].detalhe === '← 10 · → 10 · ↑ 10 · ↓ 8 cm (até Bancada)', 'lista: cooktop dentro da bancada (o caso do desenho)');
+ok(L[4].nome === 'Fora dos cômodos' && L[5].nome === 'Vaso', 'lista: o que está fora dos cômodos');
+const projX = Object.assign(D.novoProjeto('Casa'), {});
+projX.andares[0] = Object.assign(projX.andares[0], andarX);
+const pgPdf = EX.paginaSVG(projX, andarX, { W: 1123, H: 794, escala: true, pagina: 1, total: 2 });
+ok(pgPdf.includes('proporção 1:') && pgPdf.includes('(A4 a 100%)') && pgPdf.includes('PÁGINA 1 / 2'), 'PDF: legenda de proporção e número da página');
+const pgPng = EX.paginaSVG(projX, andarX, { W: 1200, H: 900, escala: false, pagina: 1, total: 1 });
+ok(pgPng.includes('>escala<') && !pgPng.includes('proporção 1:'), 'PNG: régua de escala, sem 1:N');
+ok(!pgPdf.includes('#C98424'), 'exportação não leva o cadeado da tela');
+ok(DES.conteudo(andarX, { z: 1, t: DES.TEMAS.claro, cadeados: true }).includes('stroke="#C98424"'), 'tela mostra o cadeado do item travado');
+const pgLista = EX.paginaListaSVG(projX, andarX, L, { W: 794, H: 1123, pagina: 2, total: 2 });
+ok(pgLista.includes('MEDIDAS') && pgLista.includes('>Cooktop<') && pgLista.includes('Térreo · medidas'), 'PDF: página com a lista de medidas');
+ok(!/NaN|undefined/.test(pgPdf + pgPng + pgLista), 'páginas sem NaN/undefined');
+ok(D.limparProjeto({}, false).config.lista === true, 'lista de medidas ligada por padrão');
 
 // --- folgas básicas
 const solto = [it('item', 'a', 0, 0, 50, 50), it('item', 'b', 70, 0, 50, 50)];

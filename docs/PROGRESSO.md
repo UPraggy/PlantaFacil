@@ -8,8 +8,54 @@
 
 - **No ar:** https://plantafacil.rafaelmr.com.br. O endereço antigo, https://upraggy.github.io/PlantaFacil/, ainda abre direto em vez de redirecionar (veja PENDENTE 3).
 - **Repositório:** `UPraggy/PlantaFacil` (público). `main` tem o código; `gh-pages` tem o site gerado pelo deploy.
-- **Qualidade:** `npm test` = 75 verificações ok. No Visual Inspector, o design_radar deu 93 (A) e o audit_accessibility deu 100 (era 79).
+- **Qualidade:** `npm test` = 89 verificações ok; `npm run e2e` (celular emulado + computador) ok. No Visual Inspector, o design_radar deu 93 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
+
+## 02/10/2026 (noite) — revisão no celular: travar de verdade, paredes à vista, exportação legível
+
+Pedidos do Rafael:
+- "não achei quadrado para editar as paredes";
+- "e o trancar não funciona";
+- "quero que teste no celular… pode ser no navegador, basta usar o inspecionar";
+- "verifique bem o design, motion, animação, microinteração, usabilidade";
+- "melhore a exportação para melhor visibilidade das medidas, assim como a do PDF";
+- "não precisa crescer tanto a imagem, só tem que ter boa resolução… e legenda de proporção".
+
+**Como testei.** `test/e2e-celular.js` (`npm run e2e`): Chromium headless do Playwright, o mesmo do Visual Inspector, emulando um Android (390×844, densidade 3, toque de verdade via CDP `Input.dispatchTouchEvent`), mais uma passada no computador (1366×820).
+- Percorre: criar cômodo com 3 paredes, janela e porta, tocar no miolo do cômodo, item dentro, travar e tentar arrastar, destravar e arrastar, girar, travar a planta, exportar e tema claro.
+- Tira capturas e gera o PNG e o PDF; falha se o item travado mexer, se o destravado não mexer ou se houver erro no console.
+
+**Corrigido** (achados do teste no celular):
+- **Editor de paredes escondido.** No celular ficava atrás de "Ajustes". Agora aparece direto no painel do cômodo, destacado.
+- **Selecionar o cômodo era difícil.** Só dava pela parede ou pelo nome. Agora tocar no miolo vazio dele também seleciona; arrastar ali continua movendo a vista.
+- **"O trancar não funciona".** Arrastar um item travado movia a planta inteira, e no celular isso parece o item saindo do lugar; o painel também seguia editável. Agora:
+  - o gesto `travado` não move nada: o item treme (`tremer`), o celular vibra e aparece o aviso;
+  - o painel fica só leitura, com uma faixa explicando;
+  - aparece um cadeadinho no item (só na tela);
+  - o "Travar" da planta vira modo de ver: esconde o Adicionar e bloqueia girar, duplicar, Delete, setas e N.
+- **Com cômodo selecionado o Adicionar sumia no celular**, e é aí que se põe item dentro dele. Agora vira um "+" redondo.
+- **Aberturas caíam uma em cima da outra.** `novaAbertura` agora procura um trecho livre, com 10 cm de folga das outras e dos cantos, e passa para a próxima parede se não houver. Os rótulos de parede lateral correm ao longo da parede (giro −90°) e não invadem a cota do total.
+- **Enquadramento.** Margens em pixels (`MARGENS`: esquerda 96, direita 86, cima 82, baixo 100) para caberem as cotas em cadeia, as pílulas e o zoom.
+  - Ao tocar ou abrir o painel, `enquadrarSelecao()` deixa o selecionado e o recipiente dele inteiros na tela. Durante um arrasto isso fica para o fim do gesto.
+  - Ao abrir um projeto, a planta sempre se enquadra; a vista salva podia ser de outro aparelho.
+- **Celular com painel aberto.** Só a pílula "Travar" fica e o aviso sobe para o alto. O formulário Adicionar ganhou rótulos curtos e a linha "medidas de dentro (vão livre)".
+- **Aba em segundo plano.** O `requestAnimationFrame` pausa e a planta ficava em branco. Agora o `agendar()` desenha por temporizador, sem animar, e as animações continuam quando a aba volta.
+
+**Exportação:**
+- Medidas 1,2× maiores (`AMPLIA`). A nitidez vem da resolução: PNG a 3× (cerca de 3600 px de largura) e PDF a 2,5×. A imagem não cresce.
+- **Legenda de proporção:** régua desenhada (10 cm a 100 m, escolhida pelo zoom). No PDF vai também "proporção 1:N (A4 a 100%)"; no PNG só "escala", porque 1:N depende do zoom de quem abre.
+- **Lista de medidas no PDF** (`config.lista`, ligada por padrão), numa página A4 depois de cada andar:
+  - cômodos com vão livre, área, paredes e aberturas ("Janela 120 cm — parede de cima, a 90 cm da esquerda");
+  - cada item com medida e distâncias até onde está ("Cooktop 75 × 45 cm — ← 10 · → 10 · ↑ 10 · ↓ 8 cm (até Bancada)");
+  - o que está fora dos cômodos;
+  - quebra em páginas, com numeração "PÁGINA i / n".
+
+**Visual Inspector:** radar 97 (A); cor, tipografia, espaçamento, movimento e acessibilidade em 100, desempenho em 80. Acessibilidade 100, com contraste 44/44. Movimento: transições em 72 elementos (160/80/240 ms, curvas standard e spring) e 6 animações nomeadas.
+
+**Armadilhas novas:**
+- O painel interno do Claude e o Chrome minimizado ficam `hidden`. Para teste visual use o `npm run e2e` (headless renderiza e anima).
+- O Playwright 1.60 do Visual Inspector procura o `chromium-1223`, mas o instalado é o `chromium-1234`: passe `CHROMIUM=`.
+- Para semear dados num teste, use `addInitScript` antes do primeiro load. Gravar e depois recarregar não serve, porque o `pagehide` regrava o estado da memória.
 
 ## 02/10/2026 — paredes por lado, girar cômodo, janelas e portas, frente e trás, travar
 
@@ -33,9 +79,7 @@ Pedidos do Rafael:
   - Em Mais opções: "Trazer para frente" e "Enviar para trás" (ordem em `andar.itens`).
   - Tocar de novo no mesmo lugar passa para o item de trás (espera 330 ms para não brigar com o toque duplo).
   - O item selecionado continua arrastável mesmo com outro por cima.
-- **Travar.**
-  - Cadeado no painel do item (`travado`): arrastar só move a vista, as alças somem, as setas não movem e o Delete pede para destravar. Pelo painel ainda dá para mudar as medidas, porque ali é de propósito.
-  - Pílula "Travar" na planta (`config.travado`): vale para tudo.
+- **Travar** (cadeado por item e "Travar" geral). *Comportamento revisto na entrada de cima.*
 
 **Armadilha nova:** ao testar lendo o `localStorage`, espere mais de 250 ms depois da ação, porque o app salva com atraso. Duas leituras de teste deram falso negativo por isso.
 
