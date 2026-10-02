@@ -7,6 +7,7 @@
     "dev": "node scripts/serve.mjs",
     "test": "node test/logica.test.js",
     "deploy": "node scripts/deploy.mjs",
-    "e2e": "node test/e2e-celular.js"
+    "e2e": "node test/e2e-celular.js",
+    "amostra": "node test/amostra-exportacao.js"
   }
 }

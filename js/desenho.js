@@ -22,7 +22,8 @@
       total: '#8E93A8', totalTxt: '#B4B8CC', acento: '#EAA94E',
     },
   };
-  const TEMA_EXPORT = Object.assign({}, TEMAS.claro, { fundo: '#FFFFFF' });
+  // Na folha exportada, o texto das cotas verticais corre ao longo da linha (convenção de planta técnica).
+  const TEMA_EXPORT = Object.assign({}, TEMAS.claro, { fundo: '#FFFFFF', girarCotas: true });
 
   // [preenchimento, contorno, texto]
   const CORES = {
@@ -170,18 +171,23 @@
   }
 
   // Folgas: distância de S até o vizinho mais próximo em cada direção (e = esquerda, d = direita, c = cima, b = baixo).
-  // Vizinhos são os outros itens/paredes; para um item, também a borda interna do cômodo que o contém.
+  // O escopo é o recipiente de S (o cômodo, ou o item em que ele está — o cooktop dentro da bancada):
+  // contam as bordas internas do recipiente e os vizinhos que estão dentro dele. O que está fora não conta,
+  // senão o cooktop "mediria" até a mesa atravessando a bancada.
   function folgasDe(S, itens) {
     const out = [];
     if (S.tipo === 'comodo') return out;
     const L = S.x, R = S.x + S.w, T = S.y, B = S.y + S.h, E = 0.01;
+    const rec = recipiente(S, itens);
+    const dentroDoRec = O => !rec || (O.x >= rec.x - E && O.y >= rec.y - E && O.x + O.w <= rec.x + rec.w + E && O.y + O.h <= rec.y + rec.h + E);
     for (const dir of ['e', 'd', 'c', 'b']) {
       const horiz = dir === 'e' || dir === 'd';
       let melhor = null;
       for (const O of itens) {
         if (O.id === S.id) continue;
-        const dentro = O.tipo === 'comodo';
-        if (dentro && S.tipo !== 'item') continue;
+        const dentro = rec ? O.id === rec.id : O.tipo === 'comodo';
+        if (!dentro && (O.tipo === 'comodo' || !dentroDoRec(O))) continue;
+        if (dentro && S.tipo !== 'item' && O.tipo === 'comodo') continue;
         const ol = O.x, or = O.x + O.w, ot = O.y, ob = O.y + O.h;
         const lo = horiz ? Math.max(T, ot) : Math.max(L, ol);
         const hi = horiz ? Math.min(B, ob) : Math.min(R, or);
@@ -269,9 +275,17 @@
       ? `M${r3(x1)} ${r3(y1)}H${r3(x2)}M${r3(x1)} ${r3(y1 - tk)}V${r3(y1 + tk)}M${r3(x2)} ${r3(y2 - tk)}V${r3(y2 + tk)}`
       : `M${r3(x1)} ${r3(y1)}V${r3(y2)}M${r3(x1 - tk)} ${r3(y1)}H${r3(x1 + tk)}M${r3(x2 - tk)} ${r3(y2)}H${r3(x2 + tk)}`;
     let s = `<path d="${d}" stroke="${cor}" stroke-width="${r3(1.4 / z)}" fill="none"/>`;
+    if (texto === '') return s;
     const o = { fs, fill: corTxt, halo: t.fundo, mono: true, peso: 500 };
     if (hor && lado === 'b') s += txt((x1 + x2) / 2, y1 + 6 / z + fs * 0.8 + dd, texto, o);
     else if (hor) s += txt((x1 + x2) / 2, y1 - 6 / z - dd, texto, o);
+    else if (t.girarCotas) {
+      // vertical girada: lê de baixo para cima, colada na linha (o lado de fora fica para as letras)
+      const mid = (y1 + y2) / 2;
+      s += lado === 'e'
+        ? txt(x1 - 6 / z - dd, mid, texto, Object.assign({ rot: -90 }, o))
+        : txt(x1 + 6 / z + fs * 0.8 + dd, mid, texto, Object.assign({ rot: -90 }, o));
+    }
     else if (lado === 'e') s += txt(x1 - 7 / z - dd, (y1 + y2) / 2 + fs * 0.35, texto, Object.assign({ anchor: 'end' }, o));
     else s += txt(x1 + 7 / z + dd, (y1 + y2) / 2 + fs * 0.35, texto, Object.assign({ anchor: 'start' }, o));
     return s;
@@ -422,21 +436,37 @@
       const l = cabe(base, comp * z - 10, 12);
       if (l) s += txt(i.x + i.w / 2, i.y + i.h / 2 + fs * 0.35, l, { fs, fill: t.texto, peso: 500, halo: t.fundo, rot: vert ? -90 : 0 });
     } else if (o._contem && o._contem.has(i.id)) {
-      // Item com outros dentro (ex.: bancada com cooktop): o nome vai para o canto, para não sumir embaixo deles.
+      // Item com outros dentro (ex.: bancada com cooktop): o nome vai para o canto, para não sumir embaixo deles;
+      // na folha exportada, vai inteiro logo abaixo do item.
       const base = o.medidas ? (nome ? `${nome} · ${fmt(i.w)} × ${fmt(i.h)}` : `${fmt(i.w)} × ${fmt(i.h)}`) : nome;
-      const l = cabe(base, pw - 12, 11);
-      if (l && ph >= 20) s += txt(i.x + 6 / z, i.y + 14 / z, l, { fs: 11 / z, fill: tc, anchor: 'start', peso: 500, halo: fill });
+      if (o.forcarRotulos) {
+        if (base) o._fora.push(txt(i.x + i.w / 2, i.y + i.h + 4 / z + 11 / z * 0.9, base, { fs: 11 / z, fill: t.texto, peso: 500, halo: t.fundo }));
+      } else {
+        const l = cabe(base, pw - 12, 11);
+        if (l && ph >= 20) s += txt(i.x + 6 / z, i.y + 14 / z, l, { fs: 11 / z, fill: tc, anchor: 'start', peso: 500, halo: fill });
+      }
     } else {
       const cx = i.x + i.w / 2, cy = i.y + i.h / 2, halo = comSimbolo || (i.textura && i.textura !== 'liso') ? fill : null;
       const n1 = cabe(nome, pw - 8, 12);
       const med = o.medidas ? cabe(`${fmt(i.w)} × ${fmt(i.h)}`, pw - 8, 11, true) : '';
-      if (n1 && med && ph >= 36) {
-        s += txt(cx, cy - 2 / z, n1, { fs, fill: tc, peso: 500, halo });
+      let nomeDentro = false, medDentro = false;
+      const nIn = o.forcarRotulos && n1 !== nome ? '' : n1; // na folha, nome cortado ("Geladei…") vai inteiro por fora
+      if (nIn && med && ph >= 36) {
+        s += txt(cx, cy - 2 / z, nIn, { fs, fill: tc, peso: 500, halo });
         s += txt(cx, cy + 13 / z, med, { fs: 11 / z, fill: tc, op: 0.8, mono: true, halo });
-      } else if (n1 && ph >= 18) {
-        s += txt(cx, cy + fs * 0.35, n1, { fs, fill: tc, peso: 500, halo });
+        nomeDentro = nIn === nome; medDentro = true;
+      } else if (nIn && ph >= 18) {
+        s += txt(cx, cy + fs * 0.35, nIn, { fs, fill: tc, peso: 500, halo });
+        nomeDentro = nIn === nome;
       } else if (med && ph >= 18) {
         s += txt(cx, cy + 11 / z * 0.35, med, { fs: 11 / z, fill: tc, op: 0.8, mono: true, halo });
+        medDentro = true;
+      }
+      if (o.forcarRotulos) {
+        // Na folha nada some: o que não coube dentro do item vai escrito logo abaixo dele (numa camada por cima das linhas).
+        let y0 = i.y + i.h + 4 / z;
+        if (nome && !nomeDentro) { y0 += fs * 0.85; o._fora.push(txt(cx, y0, nome, { fs, fill: t.texto, peso: 500, halo: t.fundo })); y0 += 3 / z; }
+        if (o.medidas && !medDentro) { y0 += 11 / z * 0.85; o._fora.push(txt(cx, y0, `${fmt(i.w)} × ${fmt(i.h)}`, { fs: 11 / z, fill: t.cotaTxt, mono: true, peso: 500, halo: t.fundo })); }
       }
     }
     if (o.cadeados && i.travado && Math.min(pw, ph) >= 22) {
@@ -504,13 +534,47 @@
     return s;
   }
 
+  // Caixas (em cm) ocupadas pelos nomes dos itens, para os números das folgas desviarem delas.
+  function caixasDosNomes(itens, o) {
+    const { z } = o, fs = 12 / z, caixas = [];
+    for (const i of itens) {
+      if (i.tipo !== 'item' || i.w * z < 30) continue;
+      const cx = i.x + i.w / 2, cy = i.y + i.h / 2;
+      const w = Math.min(i.w, Math.max((i.nome || '').length * fs * 0.56, 9 * 11 / z * 0.6)), h = Math.min(i.h, fs * 2.7);
+      caixas.push({ x: cx - w / 2, y: cy - h / 2 - fs * 0.3, w, h });
+      if (o.forcarRotulos) caixas.push({ x: cx - Math.max(w, i.w) / 2, y: i.y + i.h, w: Math.max(w, i.w), h: fs * 1.4 }); // nome/medida que foram para baixo
+    }
+    return caixas;
+  }
+  function rotuloLivre(f, texto, ocupadas, o) {
+    const { z, t } = o, fs = 11 / z, w = texto.length * fs * 0.62 + 4 / z, h = fs * 1.15, e = 6 / z;
+    const bate = b => ocupadas.some(c => b.x < c.x + c.w && c.x < b.x + b.w && b.y < c.y + c.h && c.y < b.y + b.h);
+    const cand = [];
+    if (f.h) {
+      const mx = (f.p1 + f.p2) / 2, y = f.mid;
+      for (const dy of [-e - h, e, -e - 2.1 * h, e + 1.1 * h]) cand.push({ x: mx - w / 2, y: y + dy, w, h, tx: mx, ty: y + dy + fs * 0.9, rot: 0 });
+    } else {
+      // Vertical: na folha o número gira junto da linha, mas só se couber nela; numa folga curta (os 4 cm
+      // entre a pia e a borda da bancada) o número deitado, ao lado, ocupa bem menos altura.
+      const my = (f.p1 + f.p2) / 2, x = f.mid;
+      const girados = [e, -e - h, e + 1.1 * h, -e - 2.1 * h].map(dx => ({ x: x + dx, y: my - w / 2, w: h, h: w, tx: x + dx + fs * 0.9, ty: my, rot: -90 }));
+      const deitados = [];
+      for (const dy of [0, 1.1 * h, -1.1 * h]) for (const dx of [e, -e - w]) deitados.push({ x: x + dx, y: my - h / 2 + dy, w, h, tx: x + dx, ty: my + fs * 0.35 + dy, rot: 0, anchor: 'start' });
+      const cabe = Math.abs(f.p2 - f.p1) >= w + 4 / z;
+      cand.push(...(t.girarCotas && cabe ? girados.concat(deitados) : deitados.concat(t.girarCotas ? girados : [])));
+    }
+    const c = cand.find(b => !bate(b)) || cand[0];
+    ocupadas.push(c);
+    return txt(c.tx, c.ty, texto, { fs, fill: t.folgaTxt, halo: t.fundo, mono: true, peso: 500, rot: c.rot, anchor: c.anchor || 'middle' });
+  }
+
   // Desenha o andar. o = { z (px por cm), t (tema), medidas, folgasTodos, total, selId,
   //                        hoverId, fx(id) -> {op, sc}, fantasmas: [{item, op, sc}], pulso: {id, p} }
   function conteudo(andar, opcoes) {
     const defs = new Map();
     const contem = new Set();
     for (const i of andar.itens) { const c = i.tipo === 'item' ? recipiente(i, andar.itens) : null; if (c && c.tipo === 'item') contem.add(c.id); }
-    const o = Object.assign({}, opcoes, { _defs: defs, _contem: contem });
+    const o = Object.assign({}, opcoes, { _defs: defs, _contem: contem, _fora: [] });
     const { z, t } = o, itens = andar.itens;
     let s = '';
     for (const tipo of ORDEM) for (const i of itens) if (i.tipo === tipo) s += itemSVG(i, o);
@@ -525,12 +589,14 @@
     const cont = sel ? recipiente(sel, itens) : null;
     // Com recipiente, as folgas até as bordas dele já aparecem na cadeia; aqui ficam só as entre vizinhos.
     if (sel) juntar(folgasDe(sel, itens).filter(f => !(cont && f.dentro)));
+    const ocupadas = caixasDosNomes(itens, o);
     for (const f of linhas.values()) {
-      const tx = fmt(f.valor) + ' cm';
       s += f.h
-        ? cota(f.p1, f.mid, f.p2, f.mid, tx, t.folga, t.folgaTxt, z, t)
-        : cota(f.mid, f.p1, f.mid, f.p2, tx, t.folga, t.folgaTxt, z, t, 'd');
+        ? cota(f.p1, f.mid, f.p2, f.mid, '', t.folga, t.folgaTxt, z, t)
+        : cota(f.mid, f.p1, f.mid, f.p2, '', t.folga, t.folgaTxt, z, t, 'd');
+      s += rotuloLivre(f, fmt(f.valor) + ' cm', ocupadas, o);
     }
+    s += o._fora.join(''); // rótulos escritos por fora dos itens (folha): por cima das linhas das folgas
     if (o.total) s += totalSVG(itens, o);
     const sobre = o.hoverId && o.hoverId !== o.selId ? itens.find(i => i.id === o.hoverId) : null;
     if (sobre) s += `<rect x="${r3(sobre.x)}" y="${r3(sobre.y)}" width="${r3(sobre.w)}" height="${r3(sobre.h)}" rx="${r3(2 / z)}" fill="none" stroke="${t.cota}" stroke-width="${r3(1.6 / z)}" stroke-opacity=".85"/>`;

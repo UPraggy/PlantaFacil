@@ -8,8 +8,36 @@
 
 - **No ar:** https://plantafacil.rafaelmr.com.br. O endereço antigo, https://upraggy.github.io/PlantaFacil/, ainda abre direto em vez de redirecionar (veja PENDENTE 3).
 - **Repositório:** `UPraggy/PlantaFacil` (público). `main` tem o código; `gh-pages` tem o site gerado pelo deploy.
-- **Qualidade:** `npm test` = 89 verificações ok; `npm run e2e` (celular emulado + computador) ok. No Visual Inspector, o design_radar deu 93 (A) e o audit_accessibility deu 100 (era 79).
+- **Qualidade:** `npm test` = 92 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
+
+## 02/10/2026 (fim da noite) — folha legível no celular, com todas as medidas de dentro
+
+Pedidos do Rafael: "teste a exportação, está muito pequena as informações de medidas" e "não dá para ver as medidas internas".
+
+**O que estava errado:**
+- O tamanho dos números era pensado em pixels da imagem (1,2×). A imagem tem 3600 px e, vista inteira no celular, tudo encolhia para uns 4 px.
+- As folgas de todos e a medida total vinham da configuração da **tela**, que fica desligada para não poluir o desenho. A folha saía só com os tamanhos dos itens.
+- Nome que não cabia num item pequeno era cortado ("Geladei…") ou sumia. O nome da bancada ficava escondido embaixo da pia e do cooktop.
+- A folga do cooktop "atravessava" a bancada e media até a mesa, enchendo a folha de linhas cruzadas. Números de folga caíam em cima de nomes e uns dos outros.
+- O PDF escolhia A4 deitado para uma cozinha quase quadrada, e a planta ficava espremida.
+
+**Corrigido:**
+- **`FORMATOS`** (`js/exportar.js`): tamanhos pensados para a folha inteira numa tela de 390 px. Medidas com ~27 px no PNG de 1200 e ~20 px no A4 (≈ 15 pt impresso); título, legenda, régua e lista crescem junto (`ui`). A resolução continua alta só para o zoom.
+- **A folha tem os próprios interruptores:** `config.expMedidas`, `expFolgas` e `expTotal`, todos ligados por padrão, no menu Exportar → "Mostrar nos arquivos". A tela continua limpa.
+- **`forcarRotulos`:** na folha nada some. Nome ou medida que não cabe vai logo abaixo do item, e o nome de quem tem coisas dentro ("Bancada · 200 × 63") vai embaixo dele. Esses rótulos são desenhados por cima das linhas (`o._fora`).
+- **Folgas no escopo do recipiente:** o cooktop mede até a borda da bancada e a bancada até a parede, nunca através.
+- **`rotuloLivre`:** o número de cada folga procura um lugar livre, desviando dos nomes e dos outros números. Na vertical, gira junto da linha se couber nela (`girarCotas`); folga curta (os 4 cm da pia) fica com o número deitado ao lado.
+- **PDF:** testa A4 em pé e deitado e fica com o que deixa a planta maior. A proporção ("proporção **1:25** · impresso em A4 a 100%") foi para o cabeçalho; no rodapé ela passava por cima da legenda. A legenda só ganha entradas enquanto couber antes da régua.
+- **Margens:** sem item selecionado, o respiro em volta da planta reserva só o que aparece ali (totais e rótulos das aberturas).
+- **Lista do PDF:** linha comprida quebra em duas, e a paginação usa a altura real. Texto das aberturas: "parede **da** direita" (era "parede de direita").
+
+**Como conferi:** `npm run amostra` (novo, `test/amostra-exportacao.js`) exporta a cozinha do desenho do cooktop: bancada com pia e cooktop, geladeira, mesa, janela e porta. Ele gera prévias com 390 px de largura.
+- Leem-se sem zoom: pia 10/4/4/15, cooktop 10/10/8, bancada → geladeira 50, bancada → mesa 87, mesa 90/110/30, geladeira 185, totais 350 × 290.
+- A página da lista também se lê sem zoom.
+- PNG 3600 × 3687, PDF em A4 em pé, nenhum erro. Testes: `npm test` 92 ok e `npm run e2e` ok.
+
+**Armadilha:** heredoc no Bash do Windows come barras invertidas (`\d` vira `d`) em script de patch. Para regex, escreva o script com a ferramenta de arquivo, não por heredoc.
 
 ## 02/10/2026 (noite) — revisão no celular: travar de verdade, paredes à vista, exportação legível
 

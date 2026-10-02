@@ -76,12 +76,14 @@ Botão de compartilhar no topo (seta para cima):
 | Opção | Para quê |
 |---|---|
 | **Copiar link** (ou **Enviar**, no celular) | Manda o projeto inteiro dentro do link. Quem abre recebe uma **cópia** nos projetos dele, e nada passa por servidor. |
-| **Imagem (PNG)** | O andar atual em alta resolução (dá para dar zoom e ler as medidas), com título, legenda e régua de escala. Se houver item selecionado, leva as cotas dele, como no desenho do cooktop. |
-| **PDF** | A planta de cada andar numa página A4, com a régua e a proporção 1:N (vale impresso a 100%). Em seguida vem a **lista de medidas** do andar: cada cômodo, janela, porta e item, com as distâncias até as paredes. Ligue ou desligue a lista em "Mostrar nos arquivos". |
+| **Imagem (PNG)** | O andar atual com **todas as medidas de dentro**: tamanho de cada item e as distâncias (folgas) até o vizinho e até a borda de onde ele está (a pia até a borda da bancada, a mesa até a parede). Os números saem grandes, para ler no celular sem zoom, e a imagem tem alta resolução para quem quiser dar zoom. Leva título, legenda e régua de escala. Se houver item selecionado, leva também as cotas em cadeia dele, como no desenho do cooktop. |
+| **PDF** | A planta de cada andar numa página A4 (em pé ou deitada, o que deixar a planta maior), com as mesmas medidas da imagem, a régua no rodapé e a **proporção 1:N** no cabeçalho (vale impresso em A4 a 100%). Em seguida vem a **lista de medidas** do andar: cada cômodo, janela, porta e item, com as distâncias até as bordas de onde está. Ligue ou desligue a lista em "Mostrar nos arquivos". |
 | **Arquivo do projeto (.json)** | Guardar ou levar para outro aparelho. Importe pelo mesmo menu ou arraste o arquivo para a página. |
 | **Backup de tudo** | Todos os projetos num arquivo só. |
 
-No mesmo menu dá para escolher o que aparece nos arquivos: medidas, folgas de todos e total.
+Em **"Mostrar nos arquivos"**, no mesmo menu, você escolhe o que vai para a imagem e o PDF: medidas dos itens, distâncias (folgas), medida total e a lista de medidas. Vem tudo ligado, e é separado do que aparece na tela: dá para trabalhar com a tela limpa e exportar com tudo.
+
+Na folha nada some: nome ou medida que não cabe dentro de um item pequeno vai escrito logo abaixo dele, e o número de uma folga curta (os 4 cm entre a pia e a borda da bancada) fica deitado ao lado da linha.
 
 > **Importante:** os projetos ficam guardados **só neste navegador, neste aparelho**. Limpar os dados do navegador apaga tudo. Faça um **Backup de tudo** de vez em quando, e use o link ou o arquivo para passar para outro aparelho.
 

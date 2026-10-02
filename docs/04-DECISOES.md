@@ -49,6 +49,7 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
 | 02/10 | "não achei quadrado para editar as paredes"; "o trancar não funciona" | Editor de paredes sempre à vista no cômodo; tocar no miolo seleciona; travado = não move nem edita |
 | 02/10 | "teste no celular… pode ser no navegador, basta usar o inspecionar" | `npm run e2e`: Chromium emulando Android com toque de verdade |
 | 02/10 | "melhore a exportação… visibilidade das medidas, o PDF também"; "não precisa crescer tanto a imagem, só boa resolução, e legenda de proporção" | Medidas 1,2×, PNG 3× e PDF 2,5× de resolução, régua + proporção 1:N, lista de medidas no PDF |
+| 02/10 | "teste a exportação, está muito pequena as informações de medidas"; "não dá para ver as medidas internas" | Folha legível no celular sem zoom (medidas 2,5× no PNG, 1,8× no PDF); todas as medidas de dentro vão para a folha, ligadas por padrão e separadas da tela; nada some por falta de espaço; proporção no cabeçalho do PDF; A4 em pé ou deitado, o que der a planta maior |
 
 ## Decisões técnicas (e o motivo)
 
@@ -67,7 +68,11 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
   - Agora o item travado não muda: arrastar só faz tremer e avisar, e o painel fica só leitura.
   - Para andar pela planta: arrastar no vazio, ou dois dedos.
 - **PNG em alta resolução, sem lista; lista só no PDF:** ele pediu para a imagem não crescer. O PNG a 3× deixa dar zoom nas medidas, e a lista, que deixaria a imagem comprida, ganhou página própria no PDF.
-- **Proporção 1:N só no PDF:** a folha A4 impressa a 100% tem tamanho fixo, e o PNG não. No PNG a régua é a legenda de proporção.
+- **Proporção 1:N só no PDF:** a folha A4 impressa a 100% tem tamanho fixo, e o PNG não. No PNG a régua é a legenda de proporção. No PDF a proporção fica no cabeçalho (como o carimbo de uma planta) e a régua no rodapé; juntas no rodapé, uma passava por cima da legenda no A4 em pé.
+- **A folha é lida no celular (revisto em 02/10):** a primeira versão media o tamanho dos números em pixels da imagem (1,2×), e a imagem de 3600 px, vista inteira no celular, encolhia tudo para ~4 px. Agora o tamanho é pensado para a folha inteira numa tela de 390 px: as medidas saem com ~27 px no PNG de 1200 e ~20 px no A4 (≈ 15 pt impresso). A resolução continua alta só para o zoom. Para conferir: `npm run amostra` e olhar as prévias de 390 px.
+- **Medidas de dentro na folha, separadas da tela:** na tela, as folgas de todos poluem enquanto se desenha, então ficam desligadas; mas é na folha que se confere a obra. Por isso a folha tem seus próprios interruptores (`expMedidas`, `expFolgas`, `expTotal`), todos ligados por padrão.
+- **Folga mede dentro de onde o item está:** a folga do cooktop é até a borda da bancada, não até a mesa do outro lado. Medida que atravessa o recipiente não serve para montar nada e entupia a folha de linhas cruzadas.
+- **Na folha nada some:** na tela, rótulo que não cabe é cortado ou some (dá para dar zoom ou tocar no item). Na folha não há como, então o nome ou a medida que não cabe vai por fora, logo abaixo do item, e o número de folga curta fica deitado ao lado da linha.
 - **Girar o cômodo leva o conteúdo:** girar só a caixa do cômodo deixaria os móveis do lado de fora. Quem quer girar um móvel sozinho seleciona o móvel.
 - **Uma espessura para todas as paredes do cômodo:** cobre o caso comum com uma escolha só. Uma parede diferente pode ser uma parede solta.
 - **PDF escrito à mão (JPEG por página):** sem biblioteca externa (jsPDF via CDN quebraria offline e é mais uma dependência). O custo é o PDF ser imagem, não vetor.

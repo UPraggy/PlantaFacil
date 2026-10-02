@@ -109,9 +109,19 @@ ok(L[4].nome === 'Fora dos cômodos' && L[5].nome === 'Vaso', 'lista: o que est�
 const projX = Object.assign(D.novoProjeto('Casa'), {});
 projX.andares[0] = Object.assign(projX.andares[0], andarX);
 const pgPdf = EX.paginaSVG(projX, andarX, { W: 1123, H: 794, escala: true, pagina: 1, total: 2 });
-ok(pgPdf.includes('proporção 1:') && pgPdf.includes('(A4 a 100%)') && pgPdf.includes('PÁGINA 1 / 2'), 'PDF: legenda de proporção e número da página');
+ok(/proporção <tspan[^>]*>1:\d+<\/tspan> · impresso em A4 a 100%/.test(pgPdf) && pgPdf.includes('PÁGINA 1 / 2'), 'PDF: proporção 1:N no cabeçalho e número da página');
 const pgPng = EX.paginaSVG(projX, andarX, { W: 1200, H: 900, escala: false, pagina: 1, total: 1 });
-ok(pgPng.includes('>escala<') && !pgPng.includes('proporção 1:'), 'PNG: régua de escala, sem 1:N');
+ok(pgPng.includes('>escala<') && !pgPng.includes('proporção'), 'PNG: régua de escala, sem 1:N');
+// rodapé: nenhuma entrada da legenda passa por cima da régua (A4 em pé, tamanhos do PDF)
+const pgEmPe = EX.paginaSVG(projX, andarX, { W: 794, H: 1123, escala: true, pagina: 1, total: 1, amplia: 1.8, ui: 1.2 });
+const fimLeg = Math.max(...[...pgEmPe.matchAll(/<text x="([\d.]+)" y="[\d.]+" font-size="([\d.]+)"[^>]*>(parede|cômodo|item|medida|folga|total)<\/text>/g)].map(m => +m[1] + m[3].length * m[2] * 0.62));
+const iniRegua = +pgEmPe.match(/<path d="M([\d.]+) [\d.]+V[\d.]+H754V/)[1];
+ok(fimLeg < iniRegua, 'PDF em pé: legenda termina antes da régua');
+// folga curta (4 cm) na folha: número deitado ao lado da linha; folga comprida: número girado junto dela
+const curto = DES.conteudo({ itens: [it('item', 'Bancada', 0, 0, 200, 63), it('item', 'Pia', 10, 4, 90, 55)] }, { z: 0.8, t: DES.TEMA_EXPORT, folgasTodos: true, forcarRotulos: true });
+ok(/<text [^>]*>4 cm<\/text>/.test(curto) && !/rotate\(-90[^)]*\)"[^>]*>4 cm</.test(curto), 'folha: folga de 4 cm com número deitado');
+const longo = DES.conteudo({ itens: [it('comodo', 'Sala', 0, 0, 400, 400), it('item', 'Mesa', 100, 100, 100, 80)] }, { z: 0.8, t: DES.TEMA_EXPORT, folgasTodos: true, forcarRotulos: true });
+ok(/rotate\(-90[^)]*\)"[^>]*>100 cm</.test(longo), 'folha: folga comprida com número girado');
 ok(!pgPdf.includes('#C98424'), 'exportação não leva o cadeado da tela');
 ok(DES.conteudo(andarX, { z: 1, t: DES.TEMAS.claro, cadeados: true }).includes('stroke="#C98424"'), 'tela mostra o cadeado do item travado');
 const pgLista = EX.paginaListaSVG(projX, andarX, L, { W: 794, H: 1123, pagina: 2, total: 2 });

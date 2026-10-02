@@ -1096,7 +1096,8 @@
     if (p.id === proj.id) { fecharModal(); abrirProjeto(estado.projetos[0].id); } else menuProjetos();
   }
 
-  const ROTULOS_VER = { medidas: 'Medidas nos itens', folgas: 'Folgas de todos', total: 'Medida total', lista: 'Lista de medidas (no PDF)' };
+  // O que vai nos arquivos: opções próprias da exportação (a tela continua com os botões dela).
+  const ROTULOS_VER = { expMedidas: 'Medidas dos itens', expFolgas: 'Distâncias (folgas)', expTotal: 'Medida total', lista: 'Lista de medidas (no PDF)' };
   function alternador(k, rotulo) {
     const b = h('button', { type: 'button', 'aria-pressed': String(!!proj.config[k]), onclick: () => {
       proj.config[k] = !proj.config[k];

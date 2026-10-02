@@ -78,7 +78,7 @@ config.travado = boolean (trava a planta inteira)
 Uma única função monta a planta para a **tela e a exportação**:
 
 ```js
-DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fantasmas, pulso }) → string SVG
+DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fantasmas, pulso, cadeados, forcarRotulos }) → string SVG
 ```
 
 - **Escala `z` (px por cm).** Na tela, `#mundo` recebe `translate(tx ty) scale(z)`, então as coordenadas internas são cm. Traços e textos usam `/z` (ex.: `12 / z`) para terem sempre o mesmo tamanho em pixels, qualquer que seja o zoom.
@@ -91,7 +91,11 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
   - Com Medidas ligado ou o cômodo selecionado, aparece o rótulo "janela 120" por fora.
 - **Ícone girado:** desenhado nas medidas originais (`w0`/`h0`) e girado com `translate(…) rotate(giro)`.
 - **Rótulos (`cabe()`):** cortam com "…" ou somem quando não cabem. Item que contém outros (bancada com cooktop) leva o nome no canto. Parede vertical tem o texto girado −90°.
-- **Temas (`TEMAS.claro`, `TEMAS.escuro`):** a exportação usa `TEMA_EXPORT`, que é o claro com fundo branco.
+- **Temas (`TEMAS.claro`, `TEMAS.escuro`):** a exportação usa `TEMA_EXPORT`, que é o claro com fundo branco e `girarCotas: true` (número de cota vertical gira −90° e corre junto da linha, em vez de ficar deitado ao lado).
+- **`forcarRotulos` (só na folha):** nada some por falta de espaço.
+  - Nome cortado ("Geladei…") não aparece dentro: vai inteiro logo abaixo do item, e a medida que não coube vai embaixo do nome.
+  - Item com outros dentro (bancada com cooktop) leva "Bancada · 200 × 63" logo abaixo dele, em vez do canto.
+  - Esses rótulos de fora vão para `o._fora` e são desenhados **depois** das linhas das folgas, para nenhuma linha riscar o texto.
 - **`CORES[cor][tema]`** é `[preenchimento, contorno, texto]`.
 - **Ícones (`SIMBOLOS`):** 15 desenhos em linha, vistos de cima, gerados na medida real do item. Assim o cooktop sempre tem 5 bocas redondas, nunca ovais.
 - **Miniaturas do painel:** `iconeSimbolo` e `iconeTextura` usam `currentColor` e acompanham o tema.
@@ -106,7 +110,7 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
 
 ### Folgas e cotas
 - **`folgasDe(S, itens)`:** para cada direção (esquerda, direita, cima, baixo), acha o vizinho mais próximo que se sobrepõe a S no outro eixo e devolve a distância.
-  - Para um item, a borda interna do cômodo que o contém também conta (`dentro: true`).
+  - **Escopo = recipiente de S.** Contam as bordas internas do recipiente (`dentro: true`) e os vizinhos que estão dentro dele; o que está fora não conta. Sem isso o cooktop "media" até a mesa atravessando a bancada. Sem recipiente, conta a borda do cômodo que o contém, como antes.
   - Encostado (0) ou sobreposto não gera linha.
   - A linha passa no meio da faixa de sobreposição.
   - Pares A→B e B→A geram a mesma linha, e `conteudo` remove a duplicada.
@@ -118,6 +122,8 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
   - linhas de chamada tracejadas.
   
   Folga sai em vermelho, a medida do item em azul e o total em cinza. As cadeias ficam fora das paredes do cômodo. Trecho curto (< 30 px) afasta o rótulo para não colidir.
+- **Número das folgas (`rotuloLivre`):** a linha é desenhada sem texto e o número procura o primeiro lugar livre entre alguns candidatos (acima/abaixo da linha horizontal; dos dois lados da vertical), desviando dos nomes dos itens (`caixasDosNomes`) e dos números já postos.
+  - Vertical na folha: girado junto da linha **se couber nela**; folga curta (os 4 cm da pia até a borda da bancada) fica com o número deitado ao lado, que ocupa bem menos altura.
 - **Seleção:** com recipiente, mostra a cadeia, e as folgas para as bordas dele são escondidas porque já estão na cadeia. Sem recipiente, mostra largura em cima e profundidade à esquerda, mais as folgas dos vizinhos.
 
 ## Interação (`js/app.js`)
@@ -173,23 +179,39 @@ Os efeitos de JS entram em `renderizar`, que segue pedindo quadros enquanto houv
 
 ## Exportação (`js/exportar.js`)
 
-- **`paginaSVG(proj, andar, { W, H, escala, pagina, total, selId })`:** página completa com título, data, planta, legenda e régua. A planta cabe na área com 135 px de respiro em volta, para as cotas.
-- **Medidas maiores:** o desenho é chamado com `z: k / AMPLIA` (`AMPLIA = 1,2`), então textos, traços e cotas saem 1,2× maiores sem mexer na geometria.
-- **Legenda de proporção (`reguaSVG`):** régua de 10 cm a 100 m, escolhida para dar pelo menos 60 px. No PDF leva também "proporção 1:N (A4 a 100%)"; no PNG, "escala".
+A folha é pensada para ser **lida inteira no celular, sem zoom**; a resolução alta é para quem quiser dar zoom.
+
+- **`FORMATOS`** (tamanhos na folha, por formato):
+
+  | Formato | `amplia` (desenho) | `ui` (título, legenda, régua, lista) | `densidade` |
+  |---|---|---|---|
+  | PNG (1200 px lógicos de largura) | 2,5 → medidas com ~27 px | 1,6 | 3× (≈ 3600 px) |
+  | PDF (A4 a 96 dpi) | 1,8 → medidas com ~20 px (≈ 15 pt impresso) | 1,2 | 2,5× |
+  | Página da lista | — | 1,35 | 2,5× |
+
+  O desenho é chamado com `z: k / amplia`, então textos, traços e cotas crescem sem mexer na geometria.
+- **O que vai na folha** é separado da tela: `config.expMedidas`, `expFolgas` e `expTotal` (todos ligados por padrão, menu Exportar → "Mostrar nos arquivos"), mais `config.lista`. A página chama `conteudo` com `medidas: expMedidas`, `folgasTodos: expFolgas`, `total: expTotal` e `forcarRotulos: true`.
+- **`paginaSVG(proj, andar, { W, H, escala, pagina, total, selId, amplia, ui, lista })`:** título, data, planta, legenda e régua.
+  - Respiro em volta da planta por lado (`respiroDe(amplia, comSel)`): com item selecionado, sobra espaço para as cadeias; sem seleção, só para os totais (direita e embaixo) e os rótulos das aberturas.
+  - Topo e rodapé crescem com `ui` (`topoDe`, `rodapeDe`).
+- **Proporção:**
+  - `reguaSVG` desenha a régua (10 cm a 100 m, pelo menos 70 px × ui) e devolve `{ s, esq }`; a legenda só ganha entradas enquanto couber antes de `esq`, então nada fica por cima de nada.
+  - PNG: a régua leva o rótulo "escala" (1:N não faz sentido numa imagem, depende do zoom de quem abre).
+  - PDF: "proporção **1:N** · impresso em A4 a 100%" vai no **cabeçalho**, à direita (encurta se o nome do andar for comprido). `proporcao(k)` = 37,795 / k (96 dpi), arredondado de 5 em 5 ou de 10 em 10.
 - **Lista de medidas:**
-  - `linhasMedidas(andar)` monta as linhas: cômodos ordenados (área, paredes, aberturas), os itens dentro de cada recipiente (recursivo, com ← → ↑ ↓ até ele) e os que estão fora.
-  - `listaSVG` desenha, e `paginaListaSVG` é a página A4 em pé só com a lista.
-  - Vai só no PDF, quando `config.lista` está ligado.
-- **PNG:** 1200 px lógicos de largura e altura proporcional (entre 560 e 1800), desenhados a 3× (`DENSIDADE_PNG`). O resultado tem cerca de 3600 px.
+  - `linhasMedidas(andar)` monta as linhas: cômodos ordenados (área, paredes, aberturas: "parede de cima, a 90 cm da esquerda"), os itens dentro de cada recipiente (recursivo, com ← → ↑ ↓ até ele) e os que estão fora.
+  - `listaSVG` desenha; linha comprida quebra em duas (nome e medida em cima, distâncias embaixo). `alturaLinhas` mede, e o PDF pagina a lista pela altura real.
+  - `paginaListaSVG` é a página A4 em pé só com a lista. Vai só no PDF, quando `config.lista` está ligado.
+- **PNG (`tamanhoPNG`):** 1200 px de largura; a altura acompanha a planta, entre 700 e 2000.
 - **PDF:**
-  - uma página A4 por andar, deitada se a planta for mais larga;
-  - a ordem das páginas: a planta de cada andar e, em seguida, as páginas da lista dele (`porPagina` linhas cada);
-  - cada página é desenhada a 2,5× (`DENSIDADE_PDF`), vira JPEG (qualidade 0,9) e entra no PDF;
+  - uma página A4 por andar; `tamanhoA4(caixa, comSel)` testa em pé e deitada e fica com a que deixa a planta maior (k maior). Uma cozinha quase quadrada sai em pé;
+  - a ordem das páginas: a planta de cada andar e, em seguida, as páginas da lista dele;
+  - cada página vira JPEG (qualidade 0,9) e entra no PDF;
   - o `montarPDF` escreve o arquivo à mão: catálogo, páginas, `XObject` `DCTDecode` e `xref` com linhas de 20 bytes. O teste confere os offsets.
-  - A escala impressa é `1:N` com N = 37,795 / k (96 dpi), arredondado de 5 em 5 ou de 10 em 10.
 - **Fontes:** SVG desenhado como imagem **não carrega web fonts**, então PNG e PDF saem com a fonte do sistema.
-- **Item selecionado:** se houver, o PNG e a página do andar atual no PDF levam as cotas dele (`selId`).
+- **Item selecionado:** se houver, o PNG e a página do andar atual no PDF levam as cotas em cadeia dele (`selId`).
 - **Baixar e enviar:** `baixar()` usa um `<a download>`. `compartilhar()` usa a Web Share API com arquivo, que só aparece em aparelho de toque que suporta.
+- **Como conferir a folha:** gere a cozinha de exemplo e olhe as prévias com 390 px de largura (o tamanho de um celular). Com o `npm run dev` no ar, `npm run amostra` gera o PNG, o PDF e as prévias em `%TEMP%/plantafacil-export` (`URL=` testa outro endereço, como o site no ar).
 
 ## Página 404, servidor local e testes
 

@@ -6,14 +6,24 @@
     .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'planta';
   const dataBR = ms => new Date(ms).toLocaleDateString('pt-BR');
 
-  // Margem (px da página) reservada em volta do desenho para as cotas e totais.
-  const RESPIRO = 135;
-  const TOPO = 86, RODAPE = 72, LATERAL = 40;
-  // Na exportação, textos, traços e cotas saem um pouco maiores que na tela; a nitidez vem da resolução
-  // (PNG a 3×, PDF a 2,5×), que deixa dar zoom e ler as medidas sem a imagem crescer.
-  const AMPLIA = 1.2;
-  const DENSIDADE_PNG = 3, DENSIDADE_PDF = 2.5;
-  const LINHA = 26;          // altura de uma linha da lista de medidas (px da página)
+  // Tamanho das coisas NA FOLHA, por formato — pensado para a folha inteira ser legível vista no celular, sem zoom.
+  //   amplia: multiplica textos, traços e cotas do desenho (que na tela têm 11–12 px). No PNG (1200 px de largura)
+  //           as medidas ficam com ~27 px; no PDF (A4 a 96 dpi), com ~20 px (≈ 15 pt impresso).
+  //   ui:     multiplica título, legenda, régua e lista.
+  //   densidade: pixels por px da folha (nitidez para dar zoom).
+  const FORMATOS = {
+    png: { amplia: 2.5, ui: 1.6, densidade: 3 },
+    pdf: { amplia: 1.8, ui: 1.2, densidade: 2.5 },
+    lista: { ui: 1.35 },
+  };
+  const LATERAL = 40;
+  // Respiro em volta do desenho, por lado, para as cotas: esquerda (cadeia), direita (total), cima, baixo (cadeia + total).
+  // Sem item selecionado, em volta só ficam os totais (direita e embaixo) e os rótulos das aberturas.
+  const respiroDe = (A, comSel) => (comSel
+    ? { e: Math.round(30 + 48 * A), d: Math.round(30 + 62 * A), c: Math.round(30 + 48 * A), b: Math.round(30 + 78 * A) }
+    : { e: Math.round(24 + 20 * A), d: Math.round(30 + 58 * A), c: Math.round(24 + 22 * A), b: Math.round(30 + 58 * A) });
+  const topoDe = U => Math.round(86 * U), rodapeDe = U => Math.round(72 * U);
+  const LINHA = 26;          // altura de uma linha da lista de medidas, antes de multiplicar por ui
   const LADO = { c: 'cima', d: 'direita', b: 'baixo', e: 'esquerda' };
   const PAREDE_DE = { c: 'parede de cima', d: 'parede da direita', b: 'parede de baixo', e: 'parede da esquerda' };
   const nomeDe = i => i.nome || PF.dados.ROTULO[i.tipo];
@@ -59,78 +69,118 @@
     }
     return linhas;
   }
-  const alturaLista = linhas => (linhas && linhas.length ? 34 + linhas.length * LINHA : 0);
+  const alturaLista = (linhas, U) => (linhas && linhas.length ? (34 + linhas.length * LINHA) * U : 0);
 
-  function listaSVG(linhas, x, y, larg, t) {
-    const D = PF.desenho, f = D.FONTE, m = D.MONO, corta = (txt, n) => (txt.length > n ? txt.slice(0, Math.max(1, n - 1)) + '…' : txt);
-    let s = `<text x="${x}" y="${y + 12}" font-size="12" font-weight="500" letter-spacing="1.8" fill="${t.suave}" font-family="${m}">MEDIDAS</text>`;
-    let yy = y + 34 + 14;
+  // A lista de medidas. Linha comprida quebra em duas: nome e medida em cima, distâncias embaixo.
+  function listaSVG(linhas, x, y, larg, t, U) {
+    const D = PF.desenho, f = D.FONTE, m = D.MONO, u = n => +(n * U).toFixed(2);
+    const corta = (txt, n) => (txt.length > n ? txt.slice(0, Math.max(1, n - 1)) + '…' : txt);
+    let s = `<text x="${x}" y="${y + u(12)}" font-size="${u(12)}" font-weight="500" letter-spacing="${u(1.8)}" fill="${t.suave}" font-family="${m}">MEDIDAS</text>`;
+    let yy = y + u(34) + u(14);
     linhas.forEach((l, k) => {
-      if (l.nivel === 0 && k > 0) s += `<path d="M${x} ${yy - 19}H${x + larg}" stroke="${t.gradeForte}" stroke-width="1"/>`;
-      const ind = x + l.nivel * 24;
-      if (l.tipo === 'abertura') s += `<path d="M${ind} ${yy - 5}H${ind + 12}M${ind} ${yy - 9}V${yy - 1}M${ind + 12} ${yy - 9}V${yy - 1}" stroke="${t.parede}" stroke-width="1.6" fill="none"/>`;
+      if (l.nivel === 0 && k > 0) s += `<path d="M${x} ${yy - u(19)}H${x + larg}" stroke="${t.gradeForte}" stroke-width="1"/>`;
+      const ind = x + l.nivel * u(24);
+      if (l.tipo === 'abertura') s += `<path d="M${ind} ${yy - u(5)}H${ind + u(12)}M${ind} ${yy - u(9)}V${yy - u(1)}M${ind + u(12)} ${yy - u(9)}V${yy - u(1)}" stroke="${t.parede}" stroke-width="${u(1.6)}" fill="none"/>`;
       else if (l.tipo !== 'secao') {
         const c = l.tipo === 'parede' ? [t.parede, t.parede] : (D.CORES[l.cor] || D.CORES.azul).claro;
-        s += `<rect x="${ind}" y="${yy - 11}" width="12" height="12" rx="2.5" fill="${c[0]}" stroke="${c[1]}" stroke-width="1.3"/>`;
+        s += `<rect x="${ind}" y="${yy - u(11)}" width="${u(12)}" height="${u(12)}" rx="${u(2.5)}" fill="${c[0]}" stroke="${c[1]}" stroke-width="${u(1.3)}"/>`;
       }
-      const tx = ind + 20, cabe = Math.floor((x + larg - tx) / 7.4);
+      const tx = ind + u(20), cabe = Math.floor((x + larg - tx) / u(7.6));
       const nome = corta(l.nome, 38), sobra = cabe - nome.length - l.medida.length - 3;
-      s += `<text x="${tx}" y="${yy}" font-size="15" fill="${t.texto}" font-family="${f}"><tspan font-weight="${l.nivel === 0 ? 700 : 500}">${D.esc(nome)}</tspan>` +
-        (l.medida ? `<tspan dx="12" font-size="14" font-weight="500" fill="${t.cotaTxt}" font-family="${m}">${D.esc(l.medida)}</tspan>` : '') +
-        (l.detalhe && sobra > 8 ? `<tspan dx="14" font-size="13" fill="${l.tipo === 'comodo' ? t.suave : t.folgaTxt}" font-family="${m}">${D.esc(corta(l.detalhe, sobra))}</tspan>` : '') + '</text>';
-      yy += LINHA;
+      const corDet = l.tipo === 'comodo' ? t.suave : t.folgaTxt;
+      s += `<text x="${tx}" y="${yy}" font-size="${u(15)}" fill="${t.texto}" font-family="${f}"><tspan font-weight="${l.nivel === 0 ? 700 : 500}">${D.esc(nome)}</tspan>` +
+        (l.medida ? `<tspan dx="${u(12)}" font-size="${u(14)}" font-weight="500" fill="${t.cotaTxt}" font-family="${m}">${D.esc(l.medida)}</tspan>` : '') +
+        (l.detalhe && sobra >= l.detalhe.length ? `<tspan dx="${u(14)}" font-size="${u(13)}" fill="${corDet}" font-family="${m}">${D.esc(l.detalhe)}</tspan>` : '') + '</text>';
+      if (l.detalhe && sobra < l.detalhe.length) {
+        yy += u(LINHA * 0.8);
+        s += `<text x="${tx}" y="${yy}" font-size="${u(13)}" fill="${corDet}" font-family="${m}">${D.esc(corta(l.detalhe, cabe + 4))}</text>`;
+      }
+      yy += u(LINHA);
     });
     return s;
   }
-
-  // Legenda de proporção: régua desenhada + "proporção 1:N" (no PDF, vale impresso em A4 a 100%).
-  function reguaSVG(k, xDir, y, t, noPdf) {
-    const D = PF.desenho, m = D.MONO;
-    const L = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000].find(c => c * k >= 60) || 10000;
-    const w = L * k, x0 = xDir - w;
-    let s = `<path d="M${x0} ${y - 6}V${y}H${xDir}V${y - 6}M${x0 + w / 2} ${y - 3}V${y}" stroke="${t.texto}" stroke-width="1.6" fill="none"/>` +
-      `<text x="${x0 + w / 2}" y="${y - 10}" text-anchor="middle" font-size="12" font-weight="500" fill="${t.texto}" font-family="${m}">${L >= 100 ? D.fmt(L / 100) + ' m' : L + ' cm'}</text>`;
-    const n = 37.795 / k, r = n > 100 ? Math.round(n / 10) * 10 : Math.round(n / 5) * 5; // 1 cm real = k px a 96 dpi
-    s += `<text x="${x0 - 12}" y="${y}" text-anchor="end" font-size="12" fill="${t.suave}" font-family="${m}">${noPdf ? `proporção 1:${Math.max(1, r)} (A4 a 100%)` : 'escala'}</text>`;
-    return s;
+  // Quantas linhas de lista cabem (contando as que quebram em duas).
+  function alturaLinhas(linhas, larg, U) {
+    let h = (34 + 14) * U;
+    for (const l of linhas) {
+      const ind = l.nivel * 24 * U + 20 * U, cabe = Math.floor((larg - ind) / (7.6 * U));
+      h += LINHA * U + (l.detalhe && cabe - Math.min(38, l.nome.length) - l.medida.length - 3 < l.detalhe.length ? LINHA * 0.8 * U : 0);
+    }
+    return h;
   }
 
-  function cabecalho(proj, sub, o, W, t) {
-    const D = PF.desenho;
+  // Proporção da folha: 1 cm real vira k px; a 96 dpi, 1 cm de papel = 37,795 px. Arredonda para 1:5, 1:10, 1:25…
+  function proporcao(k) {
+    const n = 37.795 / k;
+    return Math.max(1, n > 100 ? Math.round(n / 10) * 10 : Math.round(n / 5) * 5);
+  }
+
+  // Régua desenhada (vale no PNG e no PDF). Devolve também onde ela começa, para a legenda não passar por cima.
+  // No PNG leva o rótulo "escala"; no PDF a proporção 1:N vai no cabeçalho, que tem espaço.
+  function reguaSVG(k, xDir, y, t, rotulo, U) {
+    const D = PF.desenho, m = D.MONO, u = n => +(n * U).toFixed(2);
+    const L = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000].find(c => c * k >= u(70)) || 10000;
+    const w = L * k, x0 = xDir - w;
+    let s = `<path d="M${x0} ${y - u(7)}V${y}H${xDir}V${y - u(7)}M${x0 + w / 2} ${y - u(4)}V${y}" stroke="${t.texto}" stroke-width="${u(1.8)}" fill="none"/>` +
+      `<text x="${x0 + w / 2}" y="${y - u(11)}" text-anchor="middle" font-size="${u(12)}" font-weight="500" fill="${t.texto}" font-family="${m}">${L >= 100 ? D.fmt(L / 100) + ' m' : L + ' cm'}</text>`;
+    let esq = x0;
+    if (rotulo) {
+      s += `<text x="${x0 - u(12)}" y="${y}" text-anchor="end" font-size="${u(12)}" fill="${t.suave}" font-family="${m}">${rotulo}</text>`;
+      esq = x0 - u(12) - rotulo.length * u(12) * 0.62;
+    }
+    return { s, esq };
+  }
+
+  function cabecalho(proj, sub, o, W, t, U) {
+    const D = PF.desenho, u = n => +(n * U).toFixed(2);
+    let prop = '';
+    if (o.proporcao) {
+      // "proporção 1:25 · impresso em A4 a 100%", encurtado se o nome do andar for comprido
+      const livre = W - 2 * LATERAL - (sub.length + 13) * u(13) * 0.62 - u(24);
+      const fim = livre >= 39 * u(12) * 0.62 ? ' · impresso em A4 a 100%' : livre >= 27 * u(12) * 0.62 ? ' · A4 a 100%' : '';
+      prop = `<text x="${W - LATERAL}" y="${u(63)}" text-anchor="end" font-size="${u(12)}" fill="${t.suave}" font-family="${D.MONO}">proporção <tspan font-size="${u(13)}" font-weight="700" fill="${t.texto}">1:${o.proporcao}</tspan>${fim}</text>`;
+    }
     return `<rect width="${W}" height="${o.H}" fill="${t.fundo}"/>` +
-      `<text x="${LATERAL}" y="40" font-size="26" font-weight="700" fill="${t.texto}" font-family="${D.FONTE}">${D.esc(proj.nome)}</text>` +
-      `<text x="${LATERAL}" y="63" font-size="13" fill="${t.suave}" font-family="${D.MONO}">${D.esc(sub)} · ${dataBR(Date.now())}</text>` +
-      (o.total > 1 ? `<text x="${W - LATERAL}" y="38" text-anchor="end" font-size="12" fill="${t.suave}" font-family="${D.MONO}">PÁGINA ${o.pagina} / ${o.total}</text>` : '') +
-      `<path d="M${LATERAL} 74H${W - LATERAL}" stroke="${t.gradeForte}" stroke-width="1"/>`;
+      `<text x="${LATERAL}" y="${u(40)}" font-size="${u(26)}" font-weight="700" fill="${t.texto}" font-family="${D.FONTE}">${D.esc(proj.nome)}</text>` +
+      `<text x="${LATERAL}" y="${u(63)}" font-size="${u(13)}" fill="${t.suave}" font-family="${D.MONO}">${D.esc(sub)} · ${dataBR(Date.now())}</text>` +
+      (o.total > 1 ? `<text x="${W - LATERAL}" y="${u(38)}" text-anchor="end" font-size="${u(12)}" fill="${t.suave}" font-family="${D.MONO}">PÁGINA ${o.pagina} / ${o.total}</text>` : '') +
+      prop +
+      `<path d="M${LATERAL} ${u(74)}H${W - LATERAL}" stroke="${t.gradeForte}" stroke-width="1"/>`;
   }
 
   // Uma página com a planta em escala (título, desenho, lista opcional, legenda e régua) como SVG autônomo.
   function paginaSVG(proj, andar, o) {
     const D = PF.desenho, t = D.TEMA_EXPORT, cfg = proj.config;
     const { W, H } = o;
+    const A = o.amplia || FORMATOS.pdf.amplia, U = o.ui || 1, u = n => +(n * U).toFixed(2), R = respiroDe(A, !!o.selId);
+    const TOPO = topoDe(U), RODAPE = rodapeDe(U);
     const cp = D.caixa(andar.itens);
-    const hLista = alturaLista(o.lista);
+    const hLista = alturaLista(o.lista, U);
     const area = { x: LATERAL, y: TOPO, w: W - 2 * LATERAL, h: H - TOPO - RODAPE - (hLista ? hLista + 20 : 0) };
     let k = 1, plano = '';
     if (cp) {
-      k = Math.max(0.05, Math.min(8, (area.w - 2 * RESPIRO) / cp.w, (area.h - 2 * RESPIRO) / cp.h));
-      const tx = area.x + area.w / 2 - (cp.x + cp.w / 2) * k;
-      const ty = area.y + area.h / 2 - (cp.y + cp.h / 2) * k;
+      const lw = Math.max(80, area.w - R.e - R.d), lh = Math.max(80, area.h - R.c - R.b);
+      k = Math.max(0.05, Math.min(8, lw / cp.w, lh / cp.h));
+      const tx = area.x + R.e + (lw - cp.w * k) / 2 - cp.x * k;
+      const ty = area.y + R.c + (lh - cp.h * k) / 2 - cp.y * k;
       plano = `<g transform="translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${k.toFixed(5)})">` +
-        D.conteudo(andar, { z: k / AMPLIA, t, medidas: cfg.medidas, folgasTodos: cfg.folgas, total: cfg.total, selId: o.selId || null }) + '</g>';
+        D.conteudo(andar, { z: k / A, t, medidas: cfg.expMedidas, folgasTodos: cfg.expFolgas, total: cfg.expTotal, selId: o.selId || null, forcarRotulos: true }) + '</g>';
     } else {
       plano = `<text x="${W / 2}" y="${area.y + area.h / 2}" text-anchor="middle" font-size="16" fill="${t.suave}" font-family="${D.FONTE}">Andar vazio</text>`;
     }
-    const lista = hLista ? `<path d="M${LATERAL} ${area.y + area.h + 6}H${W - LATERAL}" stroke="${t.gradeForte}" stroke-width="1"/>` + listaSVG(o.lista, LATERAL, area.y + area.h + 20, W - 2 * LATERAL, t) : '';
+    const lista = hLista ? `<path d="M${LATERAL} ${area.y + area.h + 6}H${W - LATERAL}" stroke="${t.gradeForte}" stroke-width="1"/>` + listaSVG(o.lista, LATERAL, area.y + area.h + 20, W - 2 * LATERAL, t, U) : '';
 
-    const m = D.MONO, ey = H - 30;
-    let leg = '', cx = LATERAL;
+    const m = D.MONO, ey = H - u(30);
+    // A régua vem primeiro: a legenda só ganha entradas enquanto couber antes dela (nada por cima de nada).
+    const regua = cp ? reguaSVG(k, W - LATERAL, ey + u(4), t, o.escala ? '' : 'escala', U) : { s: '', esq: W - LATERAL };
+    let leg = '', cx = LATERAL, cheia = false;
     const entrada = (larg, desenho, rotulo) => {
-      leg += desenho(cx) + `<text x="${cx + 26}" y="${ey + 4}" font-size="12" fill="${t.suave}" font-family="${m}">${rotulo}</text>`;
-      cx += larg;
+      if (cheia || cx + u(26) + rotulo.length * u(12) * 0.62 > regua.esq - u(16)) { cheia = true; return; }
+      leg += desenho(cx) + `<text x="${cx + u(26)}" y="${ey + u(4)}" font-size="${u(12)}" fill="${t.suave}" font-family="${m}">${rotulo}</text>`;
+      cx += u(larg);
     };
-    const caixaLeg = (c, fill, stroke, extra) => `<rect x="${c}" y="${ey - 7}" width="19" height="13" fill="${fill}" stroke="${stroke}" stroke-width="1" ${extra || ''}/>`;
-    const linhaLeg = (c, cor) => `<path d="M${c} ${ey}H${c + 19}M${c} ${ey - 5}V${ey + 5}M${c + 19} ${ey - 5}V${ey + 5}" stroke="${cor}" stroke-width="1.8" fill="none"/>`;
+    const caixaLeg = (c, fill, stroke, extra) => `<rect x="${c}" y="${ey - u(7)}" width="${u(19)}" height="${u(13)}" fill="${fill}" stroke="${stroke}" stroke-width="1" ${extra || ''}/>`;
+    const linhaLeg = (c, cor) => `<path d="M${c} ${ey}H${c + u(19)}M${c} ${ey - u(5)}V${ey + u(5)}M${c + u(19)} ${ey - u(5)}V${ey + u(5)}" stroke="${cor}" stroke-width="${u(1.8)}" fill="none"/>`;
     const az = D.CORES.azul.claro, ci = D.CORES.cinza.claro;
     entrada(92, c => caixaLeg(c, t.parede, t.paredeBorda), 'parede');
     entrada(96, c => caixaLeg(c, ci[0], ci[1], 'stroke-dasharray="3 2"'), 'cômodo');
@@ -138,32 +188,34 @@
     entrada(88, c => linhaLeg(c, t.cota), 'medida');
     entrada(80, c => linhaLeg(c, t.folga), 'folga');
     entrada(80, c => linhaLeg(c, t.total), 'total');
-    const regua = cp ? reguaSVG(k, W - LATERAL, ey + 4, t, o.escala) : '';
 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
-      cabecalho(proj, andar.nome, o, W, t) + plano + lista +
-      `<path d="M${LATERAL} ${H - 58}H${W - LATERAL}" stroke="${t.gradeForte}" stroke-width="1"/>` +
-      leg + regua + '</svg>';
+      cabecalho(proj, andar.nome, Object.assign({ proporcao: o.escala && cp ? proporcao(k) : 0 }, o), W, t, U) + plano + lista +
+      `<path d="M${LATERAL} ${H - u(58)}H${W - LATERAL}" stroke="${t.gradeForte}" stroke-width="1"/>` +
+      leg + regua.s + '</svg>';
   }
 
   // Página só com a lista de medidas (o PDF põe uma ou mais depois de cada andar).
   function paginaListaSVG(proj, andar, linhas, o) {
-    const t = PF.desenho.TEMA_EXPORT, { W, H } = o;
+    const t = PF.desenho.TEMA_EXPORT, { W, H } = o, U = o.ui || FORMATOS.lista.ui;
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
-      cabecalho(proj, `${andar.nome} · medidas`, o, W, t) + listaSVG(linhas, LATERAL, TOPO + 8, W - 2 * LATERAL, t) + '</svg>';
+      cabecalho(proj, `${andar.nome} · medidas`, o, W, t, U) + listaSVG(linhas, LATERAL, topoDe(U) + 8, W - 2 * LATERAL, t, U) + '</svg>';
   }
 
-  function tamanhoPNG(cp, linhas) {
-    const W = 1200, extra = alturaLista(linhas) ? alturaLista(linhas) + 20 : 0;
-    if (!cp) return { W, H: 640 + extra };
-    const k = Math.min(8, (W - 2 * LATERAL - 2 * RESPIRO) / cp.w);
-    const hPlano = Math.min(1800, Math.max(560, cp.h * k + 2 * RESPIRO + TOPO + RODAPE));
-    return { W, H: Math.round(Math.min(6000, hPlano + extra)) };
+  // PNG: 1200 px de largura; a altura acompanha a planta (sem crescer demais).
+  function tamanhoPNG(cp, comSel) {
+    const W = 1200, F = FORMATOS.png, R = respiroDe(F.amplia, comSel), fixo = topoDe(F.ui) + rodapeDe(F.ui) + R.c + R.b;
+    if (!cp) return { W, H: 700 };
+    const k = Math.min(8, (W - 2 * LATERAL - R.e - R.d) / cp.w);
+    return { W, H: Math.round(Math.min(2000, Math.max(700, cp.h * k + fixo))) };
   }
 
-  function tamanhoA4(cp) {
-    const paisagem = !cp || cp.w >= cp.h;
-    return paisagem ? { W: 1123, H: 794 } : { W: 794, H: 1123 };
+  // A4 em pé ou deitado: o que deixar a planta maior (escala k maior).
+  function tamanhoA4(cp, comSel) {
+    if (!cp) return { W: 1123, H: 794 };
+    const F = FORMATOS.pdf, R = respiroDe(F.amplia, comSel), fixo = topoDe(F.ui) + rodapeDe(F.ui);
+    const k = (W, H) => Math.min((W - 2 * LATERAL - R.e - R.d) / cp.w, (H - fixo - R.c - R.b) / cp.h);
+    return k(1123, 794) >= k(794, 1123) ? { W: 1123, H: 794 } : { W: 794, H: 1123 };
   }
 
   function svgParaCanvas(svg, W, H, escala) {
@@ -227,31 +279,36 @@
       return { blob: new Blob([JSON.stringify(D.paraBackup(estado), null, 2)], { type: 'application/json' }), nome: `plantafacil-backup-${dia}.json` };
     }
     if (tipo === 'png') {
-      const { W, H } = tamanhoPNG(PF.desenho.caixa(andar.itens));
-      const svg = paginaSVG(proj, andar, { W, H, escala: false, pagina: 1, total: 1, selId });
-      const c = await svgParaCanvas(svg, W, H, DENSIDADE_PNG);
+      const F = FORMATOS.png, { W, H } = tamanhoPNG(PF.desenho.caixa(andar.itens), !!selId);
+      const svg = paginaSVG(proj, andar, { W, H, escala: false, pagina: 1, total: 1, selId, amplia: F.amplia, ui: F.ui });
+      const c = await svgParaCanvas(svg, W, H, F.densidade);
       return { blob: await canvasParaBlob(c, 'image/png'), nome: `${base}-${slug(andar.nome)}.png` };
     }
     if (tipo === 'pdf') {
       // Cada andar: a planta numa página A4 e, se a lista estiver ligada, as medidas em seguida (A4 em pé).
       const plano = [];
-      const porPagina = Math.floor((1123 - TOPO - 48) / LINHA) - 1;
+      const UL = FORMATOS.lista.ui, alturaUtil = 1123 - topoDe(UL) - 60, largUtil = 794 - 2 * LATERAL;
       for (const a of proj.andares) {
         plano.push({ a, tipo: 'planta' });
         if (proj.config.lista && a.itens.length) {
-          const linhas = linhasMedidas(a);
-          for (let k = 0; k < linhas.length; k += porPagina) plano.push({ a, tipo: 'lista', linhas: linhas.slice(k, k + porPagina) });
+          // quebra a lista em páginas pelo espaço que cada linha ocupa (há linhas que viram duas)
+          let pag = [];
+          for (const l of linhasMedidas(a)) {
+            if (pag.length && alturaLinhas(pag.concat([l]), largUtil, UL) > alturaUtil) { plano.push({ a, tipo: 'lista', linhas: pag }); pag = []; }
+            pag.push(l);
+          }
+          if (pag.length) plano.push({ a, tipo: 'lista', linhas: pag });
         }
       }
       const paginas = [];
       for (let i = 0; i < plano.length; i++) {
         const { a, tipo: tp, linhas } = plano[i];
-        const { W, H } = tp === 'planta' ? tamanhoA4(PF.desenho.caixa(a.itens)) : { W: 794, H: 1123 };
+        const { W, H } = tp === 'planta' ? tamanhoA4(PF.desenho.caixa(a.itens), !!(selId && a.id === andar.id)) : { W: 794, H: 1123 };
         const base = { W, H, pagina: i + 1, total: plano.length };
         const svg = tp === 'planta'
-          ? paginaSVG(proj, a, Object.assign({ escala: true, selId: a.id === andar.id ? selId : null }, base))
+          ? paginaSVG(proj, a, Object.assign({ escala: true, selId: a.id === andar.id ? selId : null, amplia: FORMATOS.pdf.amplia, ui: FORMATOS.pdf.ui }, base))
           : paginaListaSVG(proj, a, linhas, base);
-        const c = await svgParaCanvas(svg, W, H, DENSIDADE_PDF);
+        const c = await svgParaCanvas(svg, W, H, FORMATOS.pdf.densidade);
         const jpg = new Uint8Array(await (await canvasParaBlob(c, 'image/jpeg', 0.9)).arrayBuffer());
         paginas.push({ jpg, w: c.width, h: c.height, pw: +(W * 0.75).toFixed(2), ph: +(H * 0.75).toFixed(2) });
       }
@@ -339,5 +396,5 @@
     return desempacotar(JSON.parse(new TextDecoder().decode(bytes)));
   }
 
-  PF.exportar = { gerar, baixar, compartilhar, podeCompartilhar, montarPDF, paginaSVG, paginaListaSVG, linhasMedidas, slug, gerarLink, lerLink, empacotar, desempacotar };
+  PF.exportar = { FORMATOS, gerar, baixar, compartilhar, podeCompartilhar, montarPDF, paginaSVG, paginaListaSVG, linhasMedidas, tamanhoA4, slug, gerarLink, lerLink, empacotar, desempacotar };
 })(typeof window !== 'undefined' ? window : globalThis);
