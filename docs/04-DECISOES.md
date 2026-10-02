@@ -42,6 +42,10 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
 | 02/10 | Publicar no `UPraggy/PlantaFacil` e ajustar o Pages | Repositório criado público (ele não existia) e publicado |
 | 02/10 | Domínio `plantafacil.rafaelmr.com.br` | `CNAME` + `deploy.config.json` |
 | 02/10 | "documente tudo" | Esta pasta `docs/` + `CLAUDE.md` |
+| 02/10 | "editar quantas paredes o cômodo tem e rotacionar" | Lados com parede liga/desliga + girar o cômodo com tudo dentro (ícones giram junto) |
+| 02/10 | "adicionar vazamento nos cômodos como se fosse janelas" | Aberturas nas paredes: janela, porta (com arco) e vão |
+| 02/10 | "editar o que está na frente" | Trazer para frente / enviar para trás + tocar de novo pega o de trás |
+| 02/10 | "bloquear edição para não mover sem querer" | Cadeado por item + "Travar" na planta inteira |
 
 ## Decisões técnicas (e o motivo)
 
@@ -55,6 +59,9 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
 - **Cômodo com paredes integradas** (rodada 3): na rodada 2, o "cômodo com paredes" criava 4 paredes soltas que não acompanhavam o redimensionamento. Agora `parede` é a espessura em volta do vão livre. Paredes soltas continuam existindo para divisórias e para dar nome a uma parede específica.
 - **Cotas relativas ao recipiente:** o desenho do cooktop mede da bancada, não do mundo. `recipiente()` acha o menor cômodo ou item que contém o selecionado. Por isso o cooktop mede até a bancada, e a bancada até a cozinha.
 - **Distâncias no lugar de X/Y:** ninguém pensa "x = 115"; pensa "10 cm da parede".
+- **Travado bloqueia só o arrastar:** o que muda sem querer é o dedo na planta, não um número digitado. Por isso o painel continua editável no item travado, e o arrastar em cima dele move a vista, o que é útil no celular para andar pela planta sem tirar o cômodo do lugar.
+- **Girar o cômodo leva o conteúdo:** girar só a caixa do cômodo deixaria os móveis do lado de fora. Quem quer girar um móvel sozinho seleciona o móvel.
+- **Uma espessura para todas as paredes do cômodo:** cobre o caso comum com uma escolha só. Uma parede diferente pode ser uma parede solta.
 - **PDF escrito à mão (JPEG por página):** sem biblioteca externa (jsPDF via CDN quebraria offline e é mais uma dependência). O custo é o PDF ser imagem, não vetor.
 - **Link com o projeto no `#hash` (deflate + base64url):** compartilhar sem servidor e sem conta. O hash não é enviado ao servidor, então o projeto não passa por ninguém.
 - **`localStorage` + backup em arquivo:** guardar sem servidor, sem login e de graça. A limitação (dados por navegador e por endereço) está avisada na tela de Ajustes e em `01-USO.md`.

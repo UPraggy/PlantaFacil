@@ -13,16 +13,16 @@ js/app.js       → (IIFE)       tela: gestos, painel, modais, animação, tecla
 
 | Arquivo | Linhas | Papel |
 |---|---|---|
-| `index.html` | 182 | Estrutura: topo, andares, palco (SVG `#tela` › `#mundo`), painel, sprite de ícones de interface |
-| `style.css` | 270 | Tokens de tema e movimento, layout celular e computador (≥ 900 px), animações |
-| `js/dados.js` | 164 | Modelo e persistência |
-| `js/desenho.js` | 432 | Desenho |
-| `js/exportar.js` | 235 | Saídas |
-| `js/app.js` | 1113 | Interação |
+| `index.html` | 213 | Estrutura: topo, andares, palco (SVG `#tela` › `#mundo`), painel, sprite de ícones de interface |
+| `style.css` | 298 | Tokens de tema e movimento, layout celular e computador (≥ 900 px), animações |
+| `js/dados.js` | 195 | Modelo e persistência |
+| `js/desenho.js` | 557 | Desenho |
+| `js/exportar.js` | 238 | Saídas |
+| `js/app.js` | 1264 | Interação |
 | `404.html` | 74 | Página de erro (o `__BASE__` é trocado no deploy) |
 | `scripts/serve.mjs` | 42 | Servidor local que imita o Pages |
 | `scripts/deploy.mjs` | 77 | Publicação no `gh-pages` |
-| `test/logica.test.js` | 92 | 47 verificações |
+| `test/logica.test.js` | 150 | 75 verificações |
 
 ## Modelo de dados (`js/dados.js`)
 
@@ -37,10 +37,16 @@ item    = { id, tipo: 'item'|'comodo'|'parede', nome, x, y, w, h,
             cor: 'azul'|'ambar'|'verde'|'terra'|'roxo'|'cinza',
             textura: 'liso'|'rachura'|'cruzada'|'pontos'|'linhas'|'tijolo',
             simbolo: '' | um de D.SIMBOLOS (só tipo item),
-            parede: espessura em cm (só tipo comodo; 0 = sem paredes) }
+            giro: 0|90|180|270 (para onde o ícone está virado),
+            travado: boolean (arrastar não move nem redimensiona),
+            parede: espessura em cm (só tipo comodo; 0 = sem paredes),
+            lados: subconjunto de 'cdbe' (só comodo; quais lados têm parede: cima, direita, baixo, esquerda),
+            aberturas: [{ id, lado: 'c'|'d'|'b'|'e', pos, larg, tipo: 'janela'|'porta'|'vao' }] (só comodo) }
+config.travado = boolean (trava a planta inteira)
 ```
 
-- **Cômodo:** `x/y/w/h` é o **vão livre**. As paredes ocupam `parede` cm do lado de fora (`DES.limites(i)` devolve o retângulo externo).
+- **Cômodo:** `x/y/w/h` é o **vão livre**. As paredes ocupam `parede` cm do lado de fora, só nos `lados` ligados. `DES.ladosDe(i)` devolve os lados que de fato têm parede (`''` se a espessura é 0), e `DES.limites(i)` o retângulo externo.
+- **Abertura:** `pos` é a distância do canto, contada a partir da esquerda nos lados `c`/`b` e de cima nos lados `e`/`d`. O desenho limita a abertura ao tamanho do lado (`aberturasNoLado`). `D.novaAbertura(comodo, tipo)` cria uma centrada no primeiro lado com parede (janela 120, porta 80, vão 90).
 - **Outras chaves no `localStorage`:**
   - `plantafacil:tema` guarda `auto|claro|escuro`;
   - `plantafacil:novo` guarda os últimos valores do formulário Adicionar;
@@ -60,7 +66,8 @@ item    = { id, tipo: 'item'|'comodo'|'parede', nome, x, y, w, h,
 ### Link de compartilhar (`js/exportar.js`)
 `#p=z.<base64url(deflate-raw(JSON))>`. Sem `CompressionStream`, usa `#p=r.<base64url(JSON)>`. O conteúdo é compacto:
 ```js
-{ v: 1, n: nome, c: config, a: [{ n: nomeDoAndar, i: [[tipo, nome, x, y, w, h, cor, textura, simbolo, parede], …] }] }
+{ v: 1, n: nome, c: config, a: [{ n: nomeDoAndar, i: [[tipo, nome, x, y, w, h, cor, textura, simbolo, parede, lados, giro, aberturas, travado], …] }] }
+// aberturas = [[lado, pos, larg, tipo], …]; travado = 0|1. Links antigos (sem os 4 últimos) continuam abrindo.
 ```
 - O hash **nunca vai para servidor**.
 - Ao abrir o link, `receberLinkDaUrl` passa o conteúdo por `paraImportar`, cria um projeto novo, avisa e limpa o hash com `history.replaceState`. Também roda no `hashchange`.
@@ -76,13 +83,26 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
 
 - **Escala `z` (px por cm).** Na tela, `#mundo` recebe `translate(tx ty) scale(z)`, então as coordenadas internas são cm. Traços e textos usam `/z` (ex.: `12 / z`) para terem sempre o mesmo tamanho em pixels, qualquer que seja o zoom.
 - **Ordem:** cômodos, depois paredes, depois itens. Por cima vêm as folgas, o total, o realce de hover e a seleção com as cotas.
-- **Cada item** é desenhado em camadas: preenchimento, textura (`<pattern>` com espaçamento fixo em pixels, como hachura de CAD), contorno, ícone e rótulos. O cômodo com paredes é um anel `fill-rule="evenodd"`.
+- **Cada item** é desenhado em camadas: preenchimento, textura (`<pattern>` com espaçamento fixo em pixels, como hachura de CAD), contorno, ícone e rótulos.
+- **Paredes do cômodo (`paredesSVG`):**
+  - Cada lado ligado vira um retângulo. Os de cima e de baixo cobrem os cantos quando o lado vizinho também tem parede.
+  - O retângulo é cortado nos vãos (`sobras`), e lado sem parede vira linha tracejada.
+  - Nas aberturas, a janela desenha 4 linhas ao longo do vão (faces e vidro duplo) e a porta desenha a folha mais o arco de raio = largura, abrindo para dentro (o `sweep` do arco depende do lado). Todas têm batentes.
+  - Com Medidas ligado ou o cômodo selecionado, aparece o rótulo "janela 120" por fora.
+- **Ícone girado:** desenhado nas medidas originais (`w0`/`h0`) e girado com `translate(…) rotate(giro)`.
 - **Rótulos (`cabe()`):** cortam com "…" ou somem quando não cabem. Item que contém outros (bancada com cooktop) leva o nome no canto. Parede vertical tem o texto girado −90°.
 - **Temas (`TEMAS.claro`, `TEMAS.escuro`):** a exportação usa `TEMA_EXPORT`, que é o claro com fundo branco.
 - **`CORES[cor][tema]`** é `[preenchimento, contorno, texto]`.
 - **Ícones (`SIMBOLOS`):** 15 desenhos em linha, vistos de cima, gerados na medida real do item. Assim o cooktop sempre tem 5 bocas redondas, nunca ovais.
 - **Miniaturas do painel:** `iconeSimbolo` e `iconeTextura` usam `currentColor` e acompanham o tema.
 - **Grade blueprint:** linhas a cada 10 cm, 1 m e 10 m, cada uma só aparece quando sobra pelo menos 7 px entre elas, mais os "nós" (cruzinhas) a cada 1 m.
+
+### Girar (`DES.girar(alvo, itens)`)
+- Gira 90° no sentido horário em volta do centro do alvo (`(dx, dy) → (−dy, dx)`, com `y` para baixo). Troca `w`/`h`, soma 90 no `giro` e arredonda em 0,1 cm.
+- No cômodo, leva junto todo item cujos `limites` estão dentro dos `limites` dele.
+- Lados: `c→d→b→e→c`.
+- Aberturas: o lado segue a mesma roda. Nas que vão da direita para baixo ou da esquerda para cima a contagem inverte: `pos = novaLargura − pos − larg`.
+- Quatro giros voltam exatamente ao começo (há teste).
 
 ### Folgas e cotas
 - **`folgasDe(S, itens)`:** para cada direção (esquerda, direita, cima, baixo), acha o vizinho mais próximo que se sobrepõe a S no outro eixo e devolve a distância.
@@ -115,6 +135,9 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
   | `espera` | sobrou um dedo depois da pinça |
 
   - **Toque sem mover:** no vazio desseleciona, no item seleciona.
+  - **Toque de novo no selecionado** com outros itens sob o dedo (`itensEm` lista da frente para trás): depois de 330 ms, se não veio o segundo toque do toque duplo, passa para o próximo da lista (`gesto.ciclo`).
+  - **O selecionado é o arrastado** se estiver sob o dedo, mesmo atrás de outro.
+  - **Travado** (`travado(i)` = `config.travado` ou `i.travado`): o toque seleciona, mas o gesto vira `pan`. Sem alças, as setas não movem e o Delete pede para destravar.
   - **Dois toques em menos de 320 ms e 28 px:** `toqueDuplo` aproxima até o item, ou 2× no ponto.
   - **Roda do mouse:** zoom em volta do cursor (com `Ctrl`, mais rápido).
 - **O que dá para pegar (`itemEm`):** itens primeiro, depois paredes, depois cômodos.
@@ -161,6 +184,10 @@ Os efeitos de JS entram em `renderizar`, que segue pedindo quadros enquanto houv
 - **`test/logica.test.js`** cobre:
   - recipiente, cadeia (o caso 10 · 45 · 8 · 75 · 63 · 95), limites e caixa com paredes;
   - folgas (vizinho, bordas do cômodo, encostado);
+  - paredes por lado (limites, lado aberto tracejado, normalização de `lados`);
+  - aberturas (criação, posição, corte da parede, arco da porta, rótulos, sanitização);
+  - giro (cômodo com o conteúdo, lados, aberturas, ícone girado, quatro giros voltam ao começo, item sozinho);
+  - travado da planta e do item;
   - `novoItem` (tamanho, nome, encaixe, parede vertical, valor inválido);
   - importação e sanitização, e o escape de `<script>` no SVG;
   - um `<pattern>` por textura e miniatura de todos os ícones;

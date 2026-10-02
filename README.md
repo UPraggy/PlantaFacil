@@ -12,6 +12,9 @@ Site para desenhar plantas no celular ou no computador. Você cria andares, côm
 - **Adicionar com tamanho livre.** Escolha item, cômodo ou parede, digite nome, largura e profundidade (com − e +) e a cor.
   - Um cômodo pode ter paredes ao redor (10, 15, 20 ou 25 cm). Elas crescem junto quando você redimensiona.
   - O item novo cai no centro do cômodo selecionado.
+- **Paredes por lado, janelas e portas.** Ligue ou desligue cada parede do cômodo e ponha janela, porta (com o arco de abrir) ou vão em qualquer parede.
+- **Girar.** O cômodo gira 90° com tudo o que está dentro, e os ícones dos móveis giram junto.
+- **Quem fica na frente e travar.** Trazer para frente e enviar para trás, e tocar de novo para pegar o item de trás. Cadeado por item e "Travar" para a planta inteira, para não mover sem querer.
 - **Mover e redimensionar.** Arraste o item. As alças nos cantos mudam o tamanho. O ímã gruda nas bordas dos outros itens.
 - **Medidas como no desenho do cooktop.** Com um item selecionado aparecem duas cadeias de cotas:
   - à esquerda, *folga · profundidade · folga*; embaixo, *folga · largura · folga*;
@@ -51,7 +54,7 @@ Abre em `http://localhost:5180`. O servidor imita o GitHub Pages: um caminho que
 npm test
 ```
 
-Testam folgas, cadeia de cotas, paredes do cômodo, importação e sanitização, o PDF gerado e o link de compartilhar.
+São 75 verificações: folgas, cadeia de cotas, paredes por lado, aberturas, giro do cômodo com o conteúdo, travar, importação e sanitização, o PDF gerado e o link de compartilhar.
 
 ## Publicar no GitHub Pages
 

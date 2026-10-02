@@ -49,7 +49,7 @@
 ## Como rodar
 ```bash
 npm run dev       # http://localhost:5180 (imita o GitHub Pages, inclusive o 404)
-npm test          # 47 verificações da lógica
+npm test          # 75 verificações da lógica
 npm run deploy    # publica (use --dry para ensaiar sem enviar)
 ```
 No preview do Claude Code: entrada `planta-facil` no `.claude/launch.json` da raiz do workspace.

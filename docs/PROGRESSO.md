@@ -8,8 +8,36 @@
 
 - **No ar:** https://plantafacil.rafaelmr.com.br. O endereço antigo, https://upraggy.github.io/PlantaFacil/, ainda abre direto em vez de redirecionar (veja PENDENTE 3).
 - **Repositório:** `UPraggy/PlantaFacil` (público). `main` tem o código; `gh-pages` tem o site gerado pelo deploy.
-- **Qualidade:** `npm test` = 47 verificações ok. No Visual Inspector, o design_radar deu 93 (A) e o audit_accessibility deu 100 (era 79).
+- **Qualidade:** `npm test` = 75 verificações ok. No Visual Inspector, o design_radar deu 93 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
+
+## 02/10/2026 — paredes por lado, girar cômodo, janelas e portas, frente e trás, travar
+
+Pedidos do Rafael:
+- "quero poder editar quantas paredes o cômodo tem e rotacionar";
+- "dê a opção de adicionar vazamento nos cômodos como se fosse janelas e editar o que está na frente e bloquear edição para não mover sem querer".
+
+**Feito** (`npm test` = 75 verificações; conferido no navegador, no computador e em 375 px):
+- **Paredes por lado.** Campo `lados` (`'cdbe'` = cima, direita, baixo, esquerda), com uma espessura só (`parede`).
+  - No painel e no formulário Adicionar há um quadradinho com os 4 lados: tocar liga ou desliga. O resumo diz, por exemplo, "3 paredes · aberto embaixo".
+  - Lado aberto aparece tracejado.
+  - `limites()`, as cotas em cadeia, o ímã e o toque usam só as paredes que existem.
+- **Girar cômodo.** O ⟳ (ou a tecla `R`) gira 90° no sentido horário e leva junto tudo o que está dentro: itens, paredes soltas, os lados com parede e as aberturas (`DES.girar`). O aviso diz "Quarto girou com N itens dentro".
+  - Todo item tem `giro` (0, 90, 180 ou 270), e o ícone gira de verdade. Antes o encosto do sofá ficava sempre em cima.
+- **Aberturas (janela, porta, vão).** Campo `aberturas: [{ lado, pos, larg, tipo }]` do cômodo; `pos` conta a partir da esquerda (lados de cima e de baixo) ou de cima (lados esquerdo e direito).
+  - A parede é cortada no vão.
+  - A janela tem linhas de vidro, a porta tem folha e arco abrindo para dentro, o vão só batentes.
+  - O rótulo ("janela 120") fica por fora da parede.
+  - No painel, "Janelas, portas e vãos" lista cada uma, com tipo, parede, distância do canto e largura (com − e +), e tem os botões + Janela, + Porta e + Vão.
+- **O que fica na frente.**
+  - Em Mais opções: "Trazer para frente" e "Enviar para trás" (ordem em `andar.itens`).
+  - Tocar de novo no mesmo lugar passa para o item de trás (espera 330 ms para não brigar com o toque duplo).
+  - O item selecionado continua arrastável mesmo com outro por cima.
+- **Travar.**
+  - Cadeado no painel do item (`travado`): arrastar só move a vista, as alças somem, as setas não movem e o Delete pede para destravar. Pelo painel ainda dá para mudar as medidas, porque ali é de propósito.
+  - Pílula "Travar" na planta (`config.travado`): vale para tudo.
+
+**Armadilha nova:** ao testar lendo o `localStorage`, espere mais de 250 ms depois da ação, porque o app salva com atraso. Duas leituras de teste deram falso negativo por isso.
 
 ## 02/10/2026 — domínio próprio `plantafacil.rafaelmr.com.br`
 
@@ -103,8 +131,9 @@ O que mudou:
 3. **Conferir se `upraggy.github.io/PlantaFacil/` passou a redirecionar** para o domínio próprio quando o GitHub terminar a checagem de DNS. Se passar, quem usou o endereço `github.io` antes perde o acesso aos dados de lá (outra origem): exportar antes.
 4. **Dados de teste** no Chrome do Rafael, em `localhost:5180` ("Meu projeto" e duas "Cozinha"). Podem ser apagados pela lista de projetos.
 5. **Ideias não feitas,** só se ele pedir:
-   - vão de porta ou janela cortando a parede (hoje porta e janela são itens comuns);
-   - itens em ângulo (hoje só giram 90°);
+   - itens em ângulo livre (hoje giram de 90° em 90°);
+   - arrastar a janela ou a porta direto na planta (hoje se ajustam pelo painel);
+   - espessura diferente por parede;
    - seleção múltipla;
    - editar uma cota tocando no número;
    - copiar item para outro andar;

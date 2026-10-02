@@ -6,7 +6,7 @@ Endereço: **https://plantafacil.rafaelmr.com.br**. Funciona no celular e no com
 
 1. Numa planta vazia, toque em **Criar cômodo** (ou no botão **Adicionar**, embaixo à direita).
 2. Escolha **Cômodo**, dê um nome (ex.: *Cozinha*) e digite o **vão livre**, ou seja, a medida de dentro, de parede a parede. Use − e + ou digite o número.
-3. Em **Paredes ao redor**, escolha a espessura: sem, 10, 15, 20 ou 25 cm. As paredes ficam do lado de fora do vão.
+3. Em **Paredes**, toque nos lados do quadradinho para dizer **quais lados têm parede**. Uma cozinha aberta para a sala, por exemplo, fica sem a parede de baixo. Depois escolha a espessura: sem, 10, 15, 20 ou 25 cm. As paredes ficam do lado de fora do vão.
 4. Toque em **Adicionar**. A tela se ajusta sozinha ao cômodo.
 
 ## 2. Coloque os itens
@@ -30,7 +30,11 @@ Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no com
 | Mover | Arraste o item. Ele encaixa de 5 em 5 cm (ou 1 ou 10, em Ajustes) e gruda nas bordas dos outros (ímã). |
 | Mudar o tamanho | Arraste as bolinhas nos cantos e lados, ou use − e + em Largura e Profundidade (segurando, repete). |
 | Posicionar exato | No painel, **Distância até…**: digite quanto quer de cada lado. Ex.: 10 em cima e 8 embaixo. |
-| Girar | Botão ⟳ ao lado das medidas (90°). |
+| Girar | Botão ⟳ ao lado das medidas, ou tecla `R` (90° no sentido horário). **No cômodo, gira tudo o que está dentro junto**: os móveis, as paredes e as janelas e portas. |
+| Paredes do cômodo | No painel do cômodo, **Paredes**: toque num lado para ligar ou desligar e escolha a espessura. O lado sem parede aparece tracejado. |
+| Janela, porta ou vão | No painel do cômodo, **Janelas, portas e vãos** › **+ Janela**, **+ Porta** ou **+ Vão**. Para cada uma: tipo, em qual parede, distância do canto e largura. A porta mostra o arco de abrir para dentro. |
+| Quem fica na frente | Quando um item está em cima do outro, **toque de novo no mesmo lugar** para pegar o de trás. Ou use **Mais opções › Trazer para frente / Enviar para trás**. O item selecionado dá para arrastar mesmo se outro estiver por cima. |
+| Não mexer sem querer | **Cadeado** ao lado do nome: o item travado não sai do lugar ao arrastar (o dedo move só a vista). **Travar**, no alto da planta, trava tudo de uma vez. Pelo painel ainda dá para mudar as medidas. |
 | Renomear | Campo do nome no painel. |
 | Cor e textura | No painel, **Cor** e **Textura** (liso, rachura, rachura cruzada, pontilhado, linhas, tijolo). |
 | Ícone de móvel | No painel, **Mais opções › Ícone** (cooktop, pia, cama, sofá…, vistos de cima). Ali também se troca o tipo (item, cômodo, parede). |
@@ -83,4 +87,4 @@ No mesmo menu dá para escolher o que aparece nos arquivos: medidas, folgas de t
 
 ## 8. Atalhos no computador
 
-`N` adiciona · `Delete` exclui · `Ctrl+Z` / `Ctrl+Y` desfaz e refaz · `Ctrl+D` duplica · setas movem o item (com `Shift`, 10×) · `+` / `−` zoom · `Esc` fecha o painel ou a janela.
+`N` adiciona · `R` gira · `Delete` exclui (item travado pede para destravar) · `Ctrl+Z` / `Ctrl+Y` desfaz e refaz · `Ctrl+D` duplica · setas movem o item (com `Shift`, 10×) · `+` / `−` zoom · `Esc` fecha o painel ou a janela.

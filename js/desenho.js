@@ -130,10 +130,18 @@
   }
 
   // ---------- geometria ----------
-  // Retângulo externo: no cômodo com paredes, inclui a espessura delas (x/y/w/h do cômodo = vão livre).
+  // Lados do cômodo que têm parede ('' = nenhum). c = cima, d = direita, b = baixo, e = esquerda.
+  function ladosDe(i) {
+    if (i.tipo !== 'comodo' || !(i.parede > 0)) return '';
+    return i.lados == null ? 'cdbe' : i.lados;
+  }
+
+  // Retângulo externo: no cômodo, inclui a espessura das paredes que existem (x/y/w/h do cômodo = vão livre).
   function limites(i) {
-    const p = i.tipo === 'comodo' ? (i.parede || 0) : 0;
-    return p ? { x: i.x - p, y: i.y - p, w: i.w + 2 * p, h: i.h + 2 * p } : { x: i.x, y: i.y, w: i.w, h: i.h };
+    const l = ladosDe(i), p = i.parede || 0;
+    if (!l) return { x: i.x, y: i.y, w: i.w, h: i.h };
+    const e = l.includes('e') ? p : 0, d = l.includes('d') ? p : 0, c = l.includes('c') ? p : 0, b = l.includes('b') ? p : 0;
+    return { x: i.x - e, y: i.y - c, w: i.w + e + d, h: i.h + c + b };
   }
 
   function caixa(itens) {
@@ -198,6 +206,42 @@
     return out;
   }
 
+  // ---------- girar 90° (sentido horário; y cresce para baixo) ----------
+  const PROX_LADO = { c: 'd', d: 'b', b: 'e', e: 'c' };
+  const girarLados = l => { const n = [...l].map(k => PROX_LADO[k]); return [...'cdbe'].filter(k => n.includes(k)).join(''); };
+  function girar90(i, cx, cy) {
+    const dx = i.x + i.w / 2 - cx, dy = i.y + i.h / 2 - cy;
+    [i.w, i.h] = [i.h, i.w];
+    i.x = r1(cx - dy - i.w / 2);
+    i.y = r1(cy + dx - i.h / 2);
+    i.giro = ((i.giro || 0) + 90) % 360;
+    if (i.tipo === 'comodo') {
+      i.lados = girarLados(i.lados == null ? 'cdbe' : i.lados);
+      // direita→baixo e esquerda→cima invertem o sentido da contagem; o novo lado mede i.w (largura já trocada)
+      for (const a of i.aberturas || []) {
+        const inverte = a.lado === 'd' || a.lado === 'e';
+        a.lado = PROX_LADO[a.lado];
+        if (inverte) a.pos = r1(Math.max(0, i.w - a.pos - a.larg));
+      }
+    }
+  }
+  // Gira o item no lugar. Num cômodo, gira junto tudo o que está dentro dele (itens, paredes soltas) e os lados
+  // com parede. Devolve quantos itens foram junto.
+  function girar(alvo, itens) {
+    const cx = alvo.x + alvo.w / 2, cy = alvo.y + alvo.h / 2;
+    const junto = [];
+    if (alvo.tipo === 'comodo') {
+      const L = limites(alvo), E = 0.01;
+      for (const o of itens) {
+        if (o.id === alvo.id) continue;
+        const b = limites(o);
+        if (b.x >= L.x - E && b.y >= L.y - E && b.x + b.w <= L.x + L.w + E && b.y + b.h <= L.y + L.h + E) junto.push(o);
+      }
+    }
+    for (const i of [alvo, ...junto]) girar90(i, cx, cy);
+    return junto.length;
+  }
+
   // ---------- peças do desenho ----------
   function txt(x, y, s, o) {
     const fs = o.fs;
@@ -243,6 +287,85 @@
     return `<g opacity="${r3(Math.max(0, Math.min(1, f.op)))}" transform="translate(${r3(cx)} ${r3(cy)}) scale(${r3(f.sc)}) translate(${r3(-cx)} ${r3(-cy)})">${s}</g>`;
   }
 
+  // Trechos que sobram de [a0, a1] depois de tirar os cortes (vãos de janela/porta).
+  function sobras(a0, a1, cortes) {
+    const out = [];
+    let ini = a0;
+    for (const [c0, c1] of cortes.slice().sort((p, q) => p[0] - q[0])) {
+      if (c0 > ini + 0.01) out.push([ini, c0]);
+      ini = Math.max(ini, c1);
+    }
+    if (a1 > ini + 0.01) out.push([ini, a1]);
+    return out;
+  }
+
+  // Abertura já limitada ao lado: { lado, tipo, larg, g0, g1 } (g0/g1 = início e fim ao longo do lado, em cm absolutos).
+  function aberturasNoLado(i, lado) {
+    const horiz = lado === 'c' || lado === 'b', comp = horiz ? i.w : i.h, base = horiz ? i.x : i.y;
+    return (i.aberturas || []).filter(a => a.lado === lado).map(a => {
+      const larg = Math.min(a.larg, comp), pos = Math.min(Math.max(0, a.pos), comp - larg);
+      return { lado, tipo: a.tipo, larg, g0: base + pos, g1: base + pos + larg };
+    });
+  }
+
+  // Paredes do cômodo: só nos lados ligados, cortadas nas aberturas; lados sem parede ficam tracejados.
+  function paredesSVG(i, o, stroke) {
+    const { z, t } = o;
+    const l = ladosDe(i), p = i.parede || 0, X = i.x, Y = i.y, X2 = i.x + i.w, Y2 = i.y + i.h;
+    const pe = l.includes('e') ? p : 0, pd = l.includes('d') ? p : 0;
+    const ret = (x, y, w, h) => `M${r3(x)} ${r3(y)}h${r3(w)}v${r3(h)}h${r3(-w)}Z`;
+    let paredes = '', abertos = '', detalhe = '', rotulos = '';
+    const fino = r3(1.1 / z), linha = (x1, y1, x2, y2) => `M${r3(x1)} ${r3(y1)}L${r3(x2)} ${r3(y2)}`;
+    const mostrarRotulo = o.medidas || o.selId === i.id;
+    for (const lado of 'cdbe') {
+      const horiz = lado === 'c' || lado === 'b';
+      if (!l.includes(lado)) {
+        abertos += horiz ? `M${r3(X)} ${r3(lado === 'c' ? Y : Y2)}H${r3(X2)}` : `M${r3(lado === 'e' ? X : X2)} ${r3(Y)}V${r3(Y2)}`;
+        continue;
+      }
+      const vaos = aberturasNoLado(i, lado);
+      // faixa da parede (b0..b1 na espessura) e face de dentro
+      const b0 = lado === 'c' ? Y - p : lado === 'b' ? Y2 : lado === 'e' ? X - p : X2;
+      const b1 = b0 + p, dentro = lado === 'c' ? Y : lado === 'b' ? Y2 : lado === 'e' ? X : X2;
+      const sentido = lado === 'c' || lado === 'e' ? 1 : -1; // para dentro do cômodo
+      const [a0, a1] = horiz ? [X - pe, X2 + pd] : [Y, Y2];
+      for (const [q0, q1] of sobras(a0, a1, vaos.map(v => [v.g0, v.g1]))) {
+        paredes += horiz ? ret(q0, b0, q1 - q0, p) : ret(b0, q0, p, q1 - q0);
+      }
+      for (const v of vaos) {
+        // batentes
+        detalhe += horiz ? linha(v.g0, b0, v.g0, b1) + linha(v.g1, b0, v.g1, b1) : linha(b0, v.g0, b1, v.g0) + linha(b0, v.g1, b1, v.g1);
+        if (v.tipo === 'janela') {
+          for (const f of [0, 0.42, 0.58, 1]) {
+            const k = b0 + p * f;
+            detalhe += horiz ? linha(v.g0, k, v.g1, k) : linha(k, v.g0, k, v.g1);
+          }
+        } else if (v.tipo === 'porta') {
+          const L = v.g1 - v.g0;
+          if (horiz) {
+            const fim = dentro + sentido * L, varre = sentido > 0 ? 0 : 1;
+            detalhe += linha(v.g0, dentro, v.g0, fim) + `M${r3(v.g0)} ${r3(fim)}A${r3(L)} ${r3(L)} 0 0 ${varre} ${r3(v.g1)} ${r3(dentro)}`;
+          } else {
+            const fim = dentro + sentido * L, varre = sentido > 0 ? 1 : 0;
+            detalhe += linha(dentro, v.g0, fim, v.g0) + `M${r3(fim)} ${r3(v.g0)}A${r3(L)} ${r3(L)} 0 0 ${varre} ${r3(dentro)} ${r3(v.g1)}`;
+          }
+        }
+        if (mostrarRotulo) {
+          const fs = 10 / z, txtA = `${v.tipo === 'vao' ? 'vão' : v.tipo} ${fmt(v.larg)}`;
+          const mid = (v.g0 + v.g1) / 2, fora = sentido > 0 ? b0 - 5 / z : b1 + 5 / z;
+          rotulos += horiz
+            ? txt(mid, sentido > 0 ? fora : fora + fs * 0.8, txtA, { fs, fill: t.suave, mono: true, halo: t.fundo })
+            : txt(fora, mid + fs * 0.35, txtA, { fs, fill: t.suave, mono: true, halo: t.fundo, anchor: sentido > 0 ? 'end' : 'start' });
+        }
+      }
+    }
+    let out = '';
+    if (paredes) out += `<path d="${paredes}" fill="${t.parede}"/>`;
+    if (detalhe) out += `<path d="${detalhe}" fill="none" stroke="${t.parede}" stroke-width="${fino}"/>`;
+    if (abertos) out += `<path d="${abertos}" fill="none" stroke="${stroke}" stroke-width="${r3(1.4 / z)}" stroke-dasharray="${r3(7 / z)} ${r3(4 / z)}"/>`;
+    return out + rotulos;
+  }
+
   function itemSVG(i, o) {
     const { z, t } = o;
     const fs = 12 / z;
@@ -261,19 +384,21 @@
       const id = padrao(o._defs, i.textura, i.tipo === 'parede' ? t.fundo : stroke, z, i.tipo === 'parede' ? 0.55 : 0.6);
       s += `<rect ${geo} rx="${rx}" fill="url(#${id})"/>`;
     }
-    const p = i.tipo === 'comodo' ? (i.parede || 0) : 0;
-    if (p > 0) {
-      // Paredes ao redor do cômodo: anel sólido (o vão livre continua sendo x/y/w/h).
-      const X = i.x, Y = i.y, X2 = i.x + i.w, Y2 = i.y + i.h;
-      s += `<path d="M${r3(X - p)} ${r3(Y - p)}H${r3(X2 + p)}V${r3(Y2 + p)}H${r3(X - p)}ZM${r3(X)} ${r3(Y)}V${r3(Y2)}H${r3(X2)}V${r3(Y)}Z" fill="${t.parede}" fill-rule="evenodd"/>`;
-    } else if (i.tipo === 'comodo') {
-      s += `<rect ${geo} fill="none" stroke="${stroke}" stroke-width="${r3(1.4 / z)}" stroke-dasharray="${r3(7 / z)} ${r3(4 / z)}"/>`;
+    if (i.tipo === 'comodo') {
+      s += paredesSVG(i, o, stroke);
     } else {
       s += `<rect ${geo} rx="${rx}" fill="none" stroke="${stroke}" stroke-width="${r3(1.2 / z)}"/>`;
     }
 
     const comSimbolo = i.tipo === 'item' && i.simbolo && SIMBOLOS[i.simbolo] && Math.min(pw, ph) >= 24;
-    if (comSimbolo) s += `<g transform="translate(${r3(i.x)} ${r3(i.y)})">${simboloSVG(i.simbolo, i.w, i.h, stroke, 1.2 / z, 0.85)}</g>`;
+    if (comSimbolo) {
+      // O ícone é desenhado na posição original e girado junto com o item (giro de 90° em 90°).
+      const g = i.giro || 0, w0 = g % 180 ? i.h : i.w, h0 = g % 180 ? i.w : i.h;
+      const X2 = r3(i.x + i.w), Y2 = r3(i.y + i.h);
+      const tr = g === 90 ? `translate(${X2} ${r3(i.y)}) rotate(90)` : g === 180 ? `translate(${X2} ${Y2}) rotate(180)`
+        : g === 270 ? `translate(${r3(i.x)} ${Y2}) rotate(270)` : `translate(${r3(i.x)} ${r3(i.y)})`;
+      s += `<g transform="${tr}">${simboloSVG(i.simbolo, w0, h0, stroke, 1.2 / z, 0.85)}</g>`;
+    }
 
     const nome = i.nome || '';
     if (i.tipo === 'comodo') {
@@ -319,11 +444,11 @@
     }
     s += `<rect x="${r3(L)}" y="${r3(T)}" width="${r3(i.w)}" height="${r3(i.h)}" rx="${r3(2 / z)}" fill="none" stroke="${t.acento}" stroke-width="${r3(2.2 / z)}"/>`;
     if (cont) return s + cadeiaSVG(i, cont, o);
-    const p = i.tipo === 'comodo' ? (i.parede || 0) : 0, fora = off + p;
-    s += guia(L, T, L, T - fora, t.cota, z) + guia(R, T, R, T - fora, t.cota, z);
-    s += cota(L, T - fora, R, T - fora, fmt(i.w) + ' cm', t.cota, t.cotaTxt, z, t);
-    s += guia(L, T, L - fora, T, t.cota, z) + guia(L, B, L - fora, B, t.cota, z);
-    s += cota(L - fora, T, L - fora, B, fmt(i.h) + ' cm', t.cota, t.cotaTxt, z, t, 'e');
+    const lim = limites(i), yc = lim.y - off, xc = lim.x - off; // cotas por fora das paredes, se houver
+    s += guia(L, T, L, yc, t.cota, z) + guia(R, T, R, yc, t.cota, z);
+    s += cota(L, yc, R, yc, fmt(i.w) + ' cm', t.cota, t.cotaTxt, z, t);
+    s += guia(L, T, xc, T, t.cota, z) + guia(L, B, xc, B, t.cota, z);
+    s += cota(xc, T, xc, B, fmt(i.h) + ' cm', t.cota, t.cotaTxt, z, t, 'e');
     return s;
   }
 
@@ -331,16 +456,16 @@
   // à esquerda  folga · profundidade · folga, embaixo  folga · largura · folga, e os totais do recipiente.
   function cadeiaSVG(S, C, o) {
     const { z, t } = o;
-    const p = C.tipo === 'comodo' ? (C.parede || 0) : 0;
     const L = C.x, R = C.x + C.w, T = C.y, B = C.y + C.h;
+    const lim = limites(C), Lx = lim.x, Rx = lim.x + lim.w, By = lim.y + lim.h; // faces de fora das paredes
     const sl = S.x, sr = S.x + S.w, st = S.y, sb = S.y + S.h;
-    const xe = L - p - 26 / z, yb = B + p + 26 / z, xd = R + p + 26 / z, yt = B + p + 56 / z;
+    const xe = Lx - 26 / z, yb = By + 26 / z, xd = Rx + 26 / z, yt = By + 56 / z;
     let s = '';
     s += guia(sl, st, xe, st, t.cota, z) + guia(sl, sb, xe, sb, t.cota, z);
     s += guia(sl, sb, sl, yb, t.cota, z) + guia(sr, sb, sr, yb, t.cota, z);
-    s += guia(L - p, T, xe, T, t.total, z) + guia(L - p, B, xe, B, t.total, z);
-    s += guia(L, B + p, L, yt, t.total, z) + guia(R, B + p, R, yt, t.total, z);
-    s += guia(R + p, T, xd, T, t.total, z) + guia(R + p, B, xd, B, t.total, z);
+    s += guia(Lx, T, xe, T, t.total, z) + guia(Lx, B, xe, B, t.total, z);
+    s += guia(L, By, L, yt, t.total, z) + guia(R, By, R, yt, t.total, z);
+    s += guia(Rx, T, xd, T, t.total, z) + guia(Rx, B, xd, B, t.total, z);
     const trecho = (a, b, cor, corTxt, vertical, k) => {
       if (b - a < 0.5) return '';
       const curto = (b - a) * z < 30 ? 26 * (k % 2 ? 1 : 0.15) : 0;
@@ -427,6 +552,6 @@
   PF.desenho = {
     TEMAS, TEMA_EXPORT, CORES, FONTE, MONO,
     SIMBOLOS: Object.keys(SIMBOLOS),
-    fmt, esc, caixa, limites, recipiente, folgasDe, conteudo, grade, iconeSimbolo, iconeTextura,
+    fmt, esc, caixa, limites, ladosDe, aberturasNoLado, recipiente, girar, folgasDe, conteudo, grade, iconeSimbolo, iconeTextura,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
