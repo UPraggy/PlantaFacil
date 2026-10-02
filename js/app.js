@@ -36,6 +36,7 @@
     agendar();
   }
   function sair(item) { if (!reduzir) { fantasmas.push({ item, t0: agoraMs(), dur: 220 }); agendar(); } }
+  function tremer(id) { if (!reduzir) { efeitos.set(id, { t0: agoraMs(), dur: 380, tipo: 'tremer' }); agendar(); } }
   function pulsar(id) { if (!reduzir) { pulso = { id, t0: agoraMs() }; agendar(); } }
   function irParaVista(alvo) {
     const v = andar.vista;
@@ -170,14 +171,34 @@
   function refazer() { if (hist.i < hist.pilha.length - 1) { hist.i++; restaurar(hist.pilha[hist.i]); aviso('Refeito'); } }
 
   // ---------- vista (pan e zoom) ----------
+  // Margens em pixels em volta do que se enquadra: espaço das cotas em cadeia (esquerda e embaixo), dos totais
+  // (direita), das pílulas (alto) e do zoom / botão Adicionar (embaixo).
+  const MARGENS = { e: 96, d: 86, c: 82, b: 100 };
   function vistaPara(b, pad, zMax) {
-    const z = Math.min(Math.max(Math.min((W - 2 * pad) / b.w, (H - 2 * pad) / b.h), 0.02), zMax);
-    return { z, tx: (W - b.w * z) / 2 - b.x * z, ty: (H - b.h * z) / 2 - b.y * z };
+    const m = typeof pad === 'number' ? { e: pad, d: pad, c: pad, b: pad } : pad;
+    const lw = Math.max(40, W - m.e - m.d), lh = Math.max(40, H - m.c - m.b);
+    const z = Math.min(Math.max(Math.min(lw / b.w, lh / b.h), 0.02), zMax);
+    return { z, tx: m.e + (lw - b.w * z) / 2 - b.x * z, ty: m.c + (lh - b.h * z) / 2 - b.y * z };
   }
   function calcularVista() {
     const c = DES.caixa(andar.itens);
-    // Folga extra em volta para caberem as cotas em cadeia.
-    return c ? vistaPara({ x: c.x - 60, y: c.y - 50, w: c.w + 120, h: c.h + 130 }, 24, 4) : vistaPara({ x: 0, y: 0, w: 800, h: 560 }, 44, 10);
+    return c ? vistaPara(c, MARGENS, 4) : vistaPara({ x: 0, y: 0, w: 800, h: 560 }, 44, 10);
+  }
+  // Deixa o selecionado (e as cotas dele, que ficam em volta do recipiente) inteiro na tela:
+  // se não cabe, enquadra; se só está para fora, desliza o mínimo. Nunca durante um arrasto.
+  let enquadrarDepois = false;
+  function enquadrarSelecao() {
+    const i = itemSel();
+    if (!i) return;
+    if (ptrs.size) { enquadrarDepois = true; return; }
+    const c = DES.recipiente(i, andar.itens), alvo = DES.limites(c || i), v = andar.vista, m = MARGENS;
+    const l = alvo.x * v.z + v.tx, t = alvo.y * v.z + v.ty, r = l + alvo.w * v.z, b = t + alvo.h * v.z;
+    if (l >= m.e - 1 && r <= W - m.d + 1 && t >= m.c - 1 && b <= H - m.b + 1) return;
+    if (alvo.w * v.z > W - m.e - m.d || alvo.h * v.z > H - m.c - m.b) { irParaVista(vistaPara(alvo, m, Math.max(v.z, 0.05))); return; }
+    let dx = 0, dy = 0;
+    if (l < m.e) dx = m.e - l; else if (r > W - m.d) dx = W - m.d - r;
+    if (t < m.c) dy = m.c - t; else if (b > H - m.b) dy = H - m.b - b;
+    irParaVista({ z: v.z, tx: v.tx + dx, ty: v.ty + dy });
   }
   function ajustarVista() { andar.vista = calcularVista(); }
   const plano = (sx, sy) => ({ x: (sx - andar.vista.tx) / andar.vista.z, y: (sy - andar.vista.ty) / andar.vista.z });
@@ -210,14 +231,17 @@
   function aoRedimensionar() {
     if (!medirPalco() || !andar) return;
     if (!andar.vista) ajustarVista();
-    const sel = itemSel();
-    if (sel) trazerParaVista(sel);
+    if (itemSel()) enquadrarSelecao();
     agendar();
   }
 
   // ---------- desenho na tela ----------
   function agendar() {
-    if (!quadro) quadro = requestAnimationFrame(() => { quadro = 0; renderizar(); });
+    if (quadro) return;
+    // Aba em segundo plano: o navegador pausa o requestAnimationFrame. Desenha por temporizador (sem animar),
+    // para a planta não ficar em branco; as animações continuam quando a aba volta a aparecer.
+    if (document.hidden) { quadro = setTimeout(() => { quadro = 0; renderizar(); }, 60); return; }
+    quadro = requestAnimationFrame(() => { quadro = 0; renderizar(); });
   }
 
   function alcasDe(i, z) {
@@ -278,6 +302,7 @@
       const p = (agora - a.t0) / a.dur;
       if (p >= 1) { efeitos.delete(id); return null; }
       animando = true;
+      if (a.tipo === 'tremer') return { op: 1, sc: 1, dx: Math.sin(p * Math.PI * 6) * (1 - p) * 5 / z };
       return p <= 0 ? { op: 0, sc: 0.86 } : { op: ease.out(p), sc: 0.86 + 0.14 * ease.back(p) };
     };
     fantasmas = fantasmas.filter(f => agora - f.t0 < f.dur);
@@ -296,7 +321,7 @@
     const vis = { x0: -v.tx / z, y0: -v.ty / z, x1: (W - v.tx) / z, y1: (H - v.ty) / z };
     const c = proj.config;
     let s = DES.grade(vis, z, tema);
-    s += DES.conteudo(andar, { z, t: tema, medidas: c.medidas, folgasTodos: c.folgas, total: c.total, selId, hoverId, fx, fantasmas: fant, pulso: pul });
+    s += DES.conteudo(andar, { z, t: tema, medidas: c.medidas, folgasTodos: c.folgas, total: c.total, selId, hoverId, fx, fantasmas: fant, pulso: pul, cadeados: true });
     for (const g of guias) {
       s += `<path d="M${g.x1} ${g.y1}L${g.x2} ${g.y2}" stroke="${tema.acento}" stroke-width="${1 / z}" stroke-dasharray="${4 / z} ${3 / z}" fill="none"/>`;
     }
@@ -310,7 +335,7 @@
     mundo.innerHTML = s;
     $('vazio').hidden = andar.itens.length > 0;
     atualizarEscala(z);
-    if (animando) agendar();
+    if (animando && !document.hidden) agendar();
   }
 
   // ---------- seleção e acertos ----------
@@ -339,6 +364,12 @@
     return achados;
   }
   const travado = i => !!(proj.config.travado || (i && i.travado));
+  let tAvisoTrava = 0;
+  function avisoTravado(i) {
+    if (Date.now() - tAvisoTrava < 2500) return;
+    tAvisoTrava = Date.now();
+    aviso(proj.config.travado ? 'A planta está travada. Toque em “Travar” para destravar.' : `“${nomeDe(i)}” está travado. Toque no cadeado para mexer.`);
+  }
 
   function selecionar(id) {
     if (selId === id) return;
@@ -431,10 +462,13 @@
       selecionar(alvo.id);
       const ciclo = jaSel && sob.length > 1 ? sob.map(i => i.id) : null; // tocar de novo pega o de trás
       gesto = travado(alvo)
-        ? { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false, toque: alvo.id, ciclo }
+        ? { tipo: 'travado', id: alvo.id, ini: p, moveu: false, ciclo }
         : { tipo: 'mover', id: alvo.id, orig: { x: alvo.x, y: alvo.y, w: alvo.w, h: alvo.h }, ini: p, moveu: false, ciclo };
     } else {
-      gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false };
+      const dentroDe = andar.itens
+        .filter(i => i.tipo === 'comodo' && q.x >= i.x && q.x <= i.x + i.w && q.y >= i.y && q.y <= i.y + i.h)
+        .sort((a, b) => a.w * a.h - b.w * b.h)[0];
+      gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false, comodoNoToque: dentroDe ? dentroDe.id : null };
     }
   });
 
@@ -446,6 +480,13 @@
     if (gesto.tipo === 'pinca') return moverPinca();
     if (ptrs.size > 1 || gesto.tipo === 'espera') return;
     const v = andar.vista, enc = proj.config.encaixe, lim = 8 / v.z;
+    if (gesto.tipo === 'travado') {
+      if (!gesto.moveu && Math.hypot(p.x - gesto.ini.x, p.y - gesto.ini.y) > 6) {
+        gesto.moveu = true;
+        tremer(gesto.id); vibrar(25); avisoTravado(itemPorId(gesto.id));
+      }
+      return;
+    }
     if (gesto.tipo === 'pan') {
       const dx = p.x - gesto.ini.x, dy = p.y - gesto.ini.y;
       if (!gesto.moveu && Math.hypot(dx, dy) < 4) return;
@@ -504,10 +545,11 @@
     }
     gesto = null; guias = []; imaAntes = false;
     palco.classList.remove('arrastando-item');
+    if (enquadrarDepois) { enquadrarDepois = false; setTimeout(enquadrarSelecao, 0); }
     if (!g) return;
-    const toque = e.type === 'pointerup' && !g.moveu && (g.tipo === 'pan' || g.tipo === 'mover');
+    const toque = e.type === 'pointerup' && !g.moveu && (g.tipo === 'pan' || g.tipo === 'mover' || g.tipo === 'travado');
     clearTimeout(tCiclo);
-    if (toque && toqueDuplo(p, g.tipo === 'mover' ? g.id : g.toque || null)) { agendar(); return; }
+    if (toque && toqueDuplo(p, g.tipo === 'pan' ? null : g.id)) { agendar(); return; }
     if (toque && g.ciclo) {
       // espera um instante: se vier um segundo toque é zoom, senão passa para o item de trás
       tCiclo = setTimeout(() => {
@@ -517,6 +559,7 @@
     }
     if (g.tipo === 'pan') {
       if (g.moveu) salvar();
+      else if (toque && g.comodoNoToque) { selecionar(g.comodoNoToque); requestAnimationFrame(() => { medirPalco(); enquadrarSelecao(); }); }
       else if (toque && !g.toque && selId) selecionar(null);
     } else if ((g.tipo === 'mover' || g.tipo === 'redim') && g.moveu) {
       commit();
@@ -604,14 +647,20 @@
     document.querySelectorAll('#pTexturas button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.textura === (i.textura || 'liso'))));
     $('pIconesBloco').hidden = i.tipo !== 'item';
     document.querySelectorAll('#pIcones button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.simbolo === (i.simbolo || ''))));
-    const trav = !!i.travado;
+    const trav = !!i.travado, soLeitura = travado(i);
+    $('painel').classList.toggle('so-leitura', soLeitura);
+    const livres = new Set(['pTravar', 'pFechar', 'pExpandir', 'pPegador']);
+    document.querySelectorAll('#painel input, #painel select, #painel button').forEach(el => { if (!livres.has(el.id)) el.disabled = soLeitura; });
+    $('pTravar').disabled = !!proj.config.travado; // com a planta travada, o cadeado do item não muda nada
+    $('pAvisoTrava').hidden = !soLeitura;
+    $('pAvisoTravaTxt').textContent = proj.config.travado ? 'Planta travada: só para ver. Toque em “Travar”, no alto da planta, para editar.' : 'Travado: não dá para mover nem editar. Toque no cadeado para destravar.';
     $('pTravar').setAttribute('aria-pressed', String(trav));
     $('pTravar').querySelector('use').setAttribute('href', trav ? '#i-lock' : '#i-unlock');
     $('pTravar').title = trav ? 'Travado: toque para destravar' : 'Travar: não sai do lugar ao arrastar';
     $('pTravar').setAttribute('aria-label', trav ? 'Destravar este item' : 'Travar este item');
     $('pAberturas').hidden = i.tipo !== 'comodo';
     if (i.tipo === 'comodo') montarAberturas(i);
-    $('pDica').textContent = trav ? 'Travado: arrastar só mexe a vista. Pelo painel ainda dá para mudar as medidas.' : i.tipo === 'comodo' ? 'Arraste pela parede ou pelo nome para mover o cômodo. Os itens dentro dele ficam soltos para arrastar.' : '';
+    $('pDica').textContent = soLeitura ? '' : i.tipo === 'comodo' ? 'Para mover o cômodo, arraste pela parede ou pelo nome. Arrastar no meio dele move só a vista.' : '';
   }
 
   P.nome.addEventListener('input', () => { const i = itemSel(); if (!i) return; i.nome = P.nome.value; mudou(); agendar(); });
@@ -699,6 +748,7 @@
   function girarSelecionado() {
     const i = itemSel();
     if (!i) return;
+    if (travado(i)) { tremer(i.id); avisoTravado(i); return; }
     const antes = new Set(andar.itens.map(o => o.id + ':' + o.x + ':' + o.y));
     const n = DES.girar(i, andar.itens);
     entrar(andar.itens.filter(o => o.id !== i.id && !antes.has(o.id + ':' + o.x + ':' + o.y)).map(o => o.id), 12);
@@ -721,7 +771,7 @@
     const i = itemSel(); if (!i) return;
     i.travado = !i.travado;
     vibrar(10); commit(); atualizarPainel(); agendar();
-    aviso(i.travado ? `“${nomeDe(i)}” travado: não sai do lugar ao arrastar` : `“${nomeDe(i)}” destravado`);
+    aviso(i.travado ? `“${nomeDe(i)}” travado: não dá para mover nem editar` : `“${nomeDe(i)}” destravado`);
   });
   function mudarOrdem(frente) {
     const i = itemSel(); if (!i) return;
@@ -921,6 +971,7 @@
         h('div', { class: 'paredes-lado' }, resumoNovo, h('p', { class: 'rot' }, 'Espessura (cm)'), paredes)));
     const blocoOrient = h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'Direção'), orient);
     const erro = h('p', { class: 'erro', role: 'alert' });
+    const notaMedidas = h('p', { class: 'nota nota-medidas' });
     const destino = h('p', { class: 'nota destino' });
 
     [['item', 'Item'], ['comodo', 'Cômodo'], ['parede', 'Parede']].forEach(([v, r]) => segTipo.append(h('button', {
@@ -943,8 +994,8 @@
       nome.placeholder = { item: 'Ex.: Cooktop, Sofá, Cama', comodo: 'Ex.: Cozinha, Sala', parede: 'Ex.: Parede da pia' }[tipo];
       cw.input.value = String(u.w); ch.input.value = String(u.h);
       cw.rot.textContent = tipo === 'parede' ? 'Comprimento' : 'Largura';
-      ch.rot.textContent = tipo === 'parede' ? 'Espessura' : (tipo === 'comodo' ? 'Profundidade (vão livre)' : 'Profundidade');
-      if (tipo === 'comodo') cw.rot.textContent = 'Largura (vão livre)';
+      ch.rot.textContent = tipo === 'parede' ? 'Espessura' : 'Profundidade';
+      notaMedidas.textContent = tipo === 'comodo' ? 'Medidas de dentro (vão livre). As paredes ficam por fora.' : '';
       cor = u.cor || 'azul'; esp = u.parede == null ? 15 : u.parede; ladosNovo = u.lados == null ? D.LADOS : D.limparLados(u.lados); deitada = u.deitada !== false;
       marcarCor(); marcarEsp(); marcarOrient();
       blocoCor.hidden = tipo === 'parede';
@@ -983,7 +1034,7 @@
     const form = h('form', { class: 'form-novo', novalidate: true, onsubmit: e => { e.preventDefault(); criar(); } },
       segTipo,
       h('label', { class: 'campo-grande' }, h('span', { class: 'rot' }, 'Nome'), nome),
-      h('div', { class: 'medidas' }, cw.el, ch.el),
+      h('div', { class: 'medidas' }, cw.el, ch.el), notaMedidas,
       blocoCor, blocoParedes, blocoOrient, erro,
       h('button', { type: 'submit', class: 'btn primario grande' }, icone('plus'), 'Adicionar'),
       destino);
@@ -1045,7 +1096,7 @@
     if (p.id === proj.id) { fecharModal(); abrirProjeto(estado.projetos[0].id); } else menuProjetos();
   }
 
-  const ROTULOS_VER = { medidas: 'Medidas nos itens', folgas: 'Folgas de todos', total: 'Medida total' };
+  const ROTULOS_VER = { medidas: 'Medidas nos itens', folgas: 'Folgas de todos', total: 'Medida total', lista: 'Lista de medidas (no PDF)' };
   function alternador(k, rotulo) {
     const b = h('button', { type: 'button', 'aria-pressed': String(!!proj.config[k]), onclick: () => {
       proj.config[k] = !proj.config[k];
@@ -1099,7 +1150,7 @@
       h('div', {}, h('p', { class: 'rot' }, 'Mostrar nos arquivos'),
         h('div', { class: 'pills' }, Object.entries(ROTULOS_VER).map(([k, r]) => alternador(k, r)))),
       linha('png', 'Imagem (PNG)', itemSel() ? `Andar “${andar.nome}” com as cotas de “${nomeDe(itemSel())}”` : `Só o andar “${andar.nome}”`),
-      linha('pdf', 'PDF', `${plural(proj.andares.length, 'página', 'páginas')} · uma por andar, em A4`),
+      linha('pdf', 'PDF', proj.config.lista ? `A4: a planta de cada andar e a lista de medidas dele` : `${plural(proj.andares.length, 'página', 'páginas')} · uma por andar, em A4`),
       linha('json', 'Arquivo do projeto', 'Para guardar e importar depois (.json)'),
       linha('backup', 'Backup de tudo', `${plural(estado.projetos.length, 'projeto', 'projetos')} num arquivo só`),
       h('button', { type: 'button', class: 'btn', onclick: () => { $('arq').value = ''; $('arq').click(); } }, icone('upload'), 'Importar arquivo (.json)'));
@@ -1140,7 +1191,7 @@
     andar = proj.andares.find(a => a.id === proj.andarAtual) || proj.andares[0];
     proj.andarAtual = andar.id;
     selId = null; guias = []; tween = null; efeitos.clear(); fantasmas = [];
-    if (!andar.vista) ajustarVista();
+    ajustarVista(); // ao abrir, enquadra na tela atual (a vista salva pode ser de outro aparelho)
     $('nomeProjeto').textContent = proj.nome;
     reiniciarHist(); renderAndares(); atualizarPills(); atualizarPainel();
     trocaDeAndar();
@@ -1203,7 +1254,7 @@
 
   // ---------- botões e teclado ----------
   $('btnAdd').addEventListener('click', () => menuAdicionar());
-  $('btnPrimeiro').addEventListener('click', () => menuAdicionar('comodo'));
+  $('btnPrimeiro').addEventListener('click', () => { if (proj.config.travado) avisoTravado(null); else menuAdicionar('comodo'); });
   $('btnAjustar').addEventListener('click', () => irParaVista(calcularVista()));
   $('btnMais').addEventListener('click', () => zoomEm({ x: W / 2, y: H / 2 }, 1.5));
   $('btnMenos').addEventListener('click', () => zoomEm({ x: W / 2, y: H / 2 }, 1 / 1.5));
@@ -1216,7 +1267,7 @@
     const k = b.dataset.ver;
     proj.config[k] = !proj.config[k];
     atualizarPills(); mudou(); agendar();
-    if (k === 'travado') { vibrar(10); aviso(proj.config.travado ? 'Planta travada: arrastar só mexe a vista. Nada sai do lugar.' : 'Planta destravada'); atualizarPainel(); }
+    if (k === 'travado') { vibrar(10); aviso(proj.config.travado ? 'Planta travada: só para ver. Nada sai do lugar nem muda.' : 'Planta destravada: pode editar.'); atualizarPainel(); }
   }));
 
   document.addEventListener('keydown', e => {
@@ -1226,16 +1277,16 @@
     const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
     if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) refazer(); else desfazer(); }
     else if (mod && k === 'y') { e.preventDefault(); refazer(); }
-    else if (mod && k === 'd') { e.preventDefault(); if (selId) $('pDup').click(); }
-    else if (e.key === 'Delete' || e.key === 'Backspace') { if (selId) { e.preventDefault(); if (itemSel().travado) aviso('Item travado: destrave antes de excluir pelo teclado.'); else remover(selId); } }
+    else if (mod && k === 'd') { e.preventDefault(); if (selId && !travado(itemSel())) $('pDup').click(); }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { if (selId) { e.preventDefault(); if (travado(itemSel())) { tremer(selId); avisoTravado(itemSel()); } else remover(selId); } }
     else if (e.key === 'Escape') selecionar(null);
     else if (e.key === '+' || e.key === '=') zoomEm({ x: W / 2, y: H / 2 }, 1.5);
     else if (e.key === '-') zoomEm({ x: W / 2, y: H / 2 }, 1 / 1.5);
-    else if (k === 'n' && !mod) { e.preventDefault(); menuAdicionar(); }
+    else if (k === 'n' && !mod) { e.preventDefault(); if (proj.config.travado) avisoTravado(null); else menuAdicionar(); }
     else if (k === 'r' && !mod && selId) { e.preventDefault(); girarSelecionado(); }
     else if (e.key.startsWith('Arrow') && selId) {
       e.preventDefault();
-      if (travado(itemSel())) { aviso('Travado: destrave para mover.'); return; }
+      if (travado(itemSel())) { tremer(selId); avisoTravado(itemSel()); return; }
       const i = itemSel(), passo = proj.config.encaixe * (e.shiftKey ? 10 : 1);
       if (e.key === 'ArrowLeft') i.x -= passo; else if (e.key === 'ArrowRight') i.x += passo;
       else if (e.key === 'ArrowUp') i.y -= passo; else i.y += passo;
@@ -1253,12 +1304,12 @@
   if ('ResizeObserver' in window) new ResizeObserver(aoRedimensionar).observe(palco);
   else addEventListener('resize', aoRedimensionar);
   addEventListener('pagehide', () => D.salvarAgora(estado));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) D.salvarAgora(estado); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) D.salvarAgora(estado); else agendar(); });
   receberLinkDaUrl();
   try {
     if (!localStorage.getItem('plantafacil:dica')) {
       localStorage.setItem('plantafacil:dica', '1');
-      setTimeout(() => aviso('Dica: arraste para mover, belisque ou use − + para ampliar e toque duas vezes para aproximar.'), 900);
+      setTimeout(() => aviso('Dica: toque num cômodo ou item para editar. Arraste para mover, belisque ou use − + para ampliar.'), 900);
     }
   } catch (e) { /* sem armazenamento */ }
 })();

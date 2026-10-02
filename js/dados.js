@@ -15,7 +15,7 @@
   // Aberturas nas paredes do cômodo. pos = distância do canto: da esquerda (lados c/b) ou de cima (lados e/d).
   const TIPOS_ABERTURA = ['janela', 'porta', 'vao'];
   const LARGURA_ABERTURA = { janela: 120, porta: 80, vao: 90 };
-  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false };
+  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true };
   // Valores iniciais do formulário "Adicionar" (o usuário digita o tamanho que quiser).
   const NOVO_PADRAO = {
     item: { nome: '', w: 100, h: 60, cor: 'azul' },
@@ -89,7 +89,7 @@
       andares,
       config: {
         encaixe: ENCAIXES.includes(Number(c.encaixe)) ? Number(c.encaixe) : CONFIG_PADRAO.encaixe,
-        ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total, travado: !!c.travado,
+        ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total, travado: !!c.travado, lista: !!c.lista,
       },
     };
   }
@@ -133,14 +133,31 @@
     }, false);
   }
 
-  // Abertura nova no primeiro lado com parede (cima, baixo, esquerda, direita), centrada. null se não há parede.
+  // Abertura nova: no primeiro lado com parede (cima, baixo, esquerda, direita) que tenha um trecho livre —
+  // centrada se o meio estiver livre, senão no primeiro vão que couber (10 cm de folga das outras e dos cantos).
+  // Sem trecho livre em nenhuma parede, fica centrada na primeira. null se o cômodo não tem parede.
   function novaAbertura(comodo, tipo) {
     const lados = comodo.parede > 0 ? (comodo.lados == null ? LADOS : comodo.lados) : '';
-    const lado = ['c', 'b', 'e', 'd'].find(k => lados.includes(k));
-    if (!lado) return null;
-    const comp = lado === 'c' || lado === 'b' ? comodo.w : comodo.h;
-    const larg = Math.max(5, Math.min(LARGURA_ABERTURA[tipo] || 100, comp - 20));
-    return { id: uid(), lado, tipo: TIPOS_ABERTURA.includes(tipo) ? tipo : 'janela', larg, pos: Math.max(0, Math.round((comp - larg) / 2)) };
+    const ordem = ['c', 'b', 'e', 'd'].filter(k => lados.includes(k));
+    if (!ordem.length) return null;
+    const t = TIPOS_ABERTURA.includes(tipo) ? tipo : 'janela', M = 10;
+    const nova = (lado, larg, pos) => ({ id: uid(), lado, tipo: t, larg, pos: Math.max(0, Math.round(pos)) });
+    for (const lado of ordem) {
+      const comp = lado === 'c' || lado === 'b' ? comodo.w : comodo.h;
+      const larg = Math.max(5, Math.min(LARGURA_ABERTURA[t] || 100, comp - 2 * M));
+      const ocup = (comodo.aberturas || []).filter(a => a.lado === lado).map(a => [a.pos - M, a.pos + a.larg + M]).sort((p, q) => p[0] - q[0]);
+      const livre = (p0, p1) => p0 >= M - 0.01 && p1 <= comp - M + 0.01 && ocup.every(([o0, o1]) => p1 <= o0 || p0 >= o1);
+      const meio = (comp - larg) / 2;
+      if (livre(meio, meio + larg)) return nova(lado, larg, meio);
+      let ini = M;
+      for (const [o0, o1] of ocup.concat([[comp - M + 1e-9, comp]])) {
+        if (o0 - ini >= larg - 0.01 && livre(ini, ini + larg)) return nova(lado, larg, ini);
+        ini = Math.max(ini, o1);
+      }
+    }
+    const comp = ordem[0] === 'c' || ordem[0] === 'b' ? comodo.w : comodo.h;
+    const larg = Math.max(5, Math.min(LARGURA_ABERTURA[t] || 100, comp - 2 * M));
+    return nova(ordem[0], larg, (comp - larg) / 2);
   }
 
   // ---------- armazenamento local ----------

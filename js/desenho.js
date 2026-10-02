@@ -283,8 +283,16 @@
   // Entrada/saída animada de um item: escala em torno do centro + opacidade.
   function envolver(i, s, f) {
     if (!f) return s;
-    const cx = i.x + i.w / 2, cy = i.y + i.h / 2;
-    return `<g opacity="${r3(Math.max(0, Math.min(1, f.op)))}" transform="translate(${r3(cx)} ${r3(cy)}) scale(${r3(f.sc)}) translate(${r3(-cx)} ${r3(-cy)})">${s}</g>`;
+    const cx = i.x + i.w / 2, cy = i.y + i.h / 2, dx = f.dx || 0;
+    return `<g opacity="${r3(Math.max(0, Math.min(1, f.op)))}" transform="translate(${r3(cx + dx)} ${r3(cy)}) scale(${r3(f.sc)}) translate(${r3(-cx)} ${r3(-cy)})">${s}</g>`;
+  }
+
+  // Cadeadinho no canto do item travado (só na tela; a exportação não leva).
+  function cadeadoSVG(cx, cy, z, t) {
+    const k = 1 / z, n = v => r3(v * k);
+    return `<circle cx="${r3(cx)}" cy="${r3(cy)}" r="${n(8.5)}" fill="${t.fundo}" stroke="${t.acento}" stroke-width="${n(1.2)}"/>` +
+      `<rect x="${r3(cx - 3.6 * k)}" y="${r3(cy - 0.6 * k)}" width="${n(7.2)}" height="${n(5.4)}" rx="${n(1.2)}" fill="${t.acento}"/>` +
+      `<path d="M${r3(cx - 2.3 * k)} ${r3(cy - 0.6 * k)}V${r3(cy - 2.6 * k)}a${n(2.3)} ${n(2.3)} 0 0 1 ${n(4.6)} 0V${r3(cy - 0.6 * k)}" fill="none" stroke="${t.acento}" stroke-width="${n(1.4)}"/>`;
   }
 
   // Trechos que sobram de [a0, a1] depois de tirar os cortes (vãos de janela/porta).
@@ -355,7 +363,7 @@
           const mid = (v.g0 + v.g1) / 2, fora = sentido > 0 ? b0 - 5 / z : b1 + 5 / z;
           rotulos += horiz
             ? txt(mid, sentido > 0 ? fora : fora + fs * 0.8, txtA, { fs, fill: t.suave, mono: true, halo: t.fundo })
-            : txt(fora, mid + fs * 0.35, txtA, { fs, fill: t.suave, mono: true, halo: t.fundo, anchor: sentido > 0 ? 'end' : 'start' });
+            : txt(sentido > 0 ? fora : fora + fs * 0.8, mid, txtA, { fs, fill: t.suave, mono: true, halo: t.fundo, rot: -90 });
         }
       }
     }
@@ -430,6 +438,10 @@
       } else if (med && ph >= 18) {
         s += txt(cx, cy + 11 / z * 0.35, med, { fs: 11 / z, fill: tc, op: 0.8, mono: true, halo });
       }
+    }
+    if (o.cadeados && i.travado && Math.min(pw, ph) >= 22) {
+      const b = limites(i);
+      s += cadeadoSVG(b.x + b.w - 10 / z, b.y + 10 / z, z, t);
     }
     return envolver(i, s, o.fx ? o.fx(i.id) : null);
   }

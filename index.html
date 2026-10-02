@@ -20,7 +20,7 @@
     document.documentElement.dataset.tema = t;
   })();
 </script>
-<link rel="stylesheet" href="style.css?v=bbd1836604">
+<link rel="stylesheet" href="style.css?v=e3e51924f2">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -106,6 +106,7 @@
         <button class="btn primario ok" id="pFechar" type="button"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>OK</button>
       </div>
 
+      <div class="aviso-trava" id="pAvisoTrava" hidden><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span id="pAvisoTravaTxt"></span></div>
       <div class="medidas">
         <label class="campo-num"><span class="rot" id="pRotW">Largura</span>
           <span class="stepper">
@@ -135,7 +136,7 @@
         </div>
       </div>
 
-      <div id="pParedes" class="bloco extra" hidden>
+      <div id="pParedes" class="bloco destaque-paredes" hidden>
         <p class="rot">Paredes <span class="dica-rot">toque num lado para ligar ou desligar</span></p>
         <div class="paredes-editor">
           <div id="pLados"></div>
@@ -205,9 +206,9 @@
 <div id="aviso" role="status" aria-live="polite" hidden></div>
 <input id="arq" type="file" accept=".json,application/json" aria-label="Arquivo de projeto para importar" hidden>
 
-<script src="js/dados.js?v=4e1558dfe0"></script>
-<script src="js/desenho.js?v=14c2d41c5b"></script>
-<script src="js/exportar.js?v=73c5ee04b7"></script>
-<script src="js/app.js?v=3b98fbafa1"></script>
+<script src="js/dados.js?v=3583d1a73b"></script>
+<script src="js/desenho.js?v=bcdb2d0952"></script>
+<script src="js/exportar.js?v=f2c8e97231"></script>
+<script src="js/app.js?v=f3685f9392"></script>
 </body>
 </html>
