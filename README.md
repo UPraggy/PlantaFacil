@@ -1,0 +1,75 @@
+# Planta fácil
+
+Site para desenhar plantas no celular ou no computador. Você cria andares, cômodos, paredes e itens com as medidas que quiser, e vê na hora quanto sobra entre tudo, no estilo das cotas de projeto.
+
+É só HTML, CSS e JS, sem build nem dependências. Os dados ficam no `localStorage` do navegador.
+
+## O que dá para fazer
+
+- **Andares e projetos.** Vários projetos, cada um com vários andares. Dá para renomear, duplicar e excluir.
+- **Adicionar com tamanho livre.** Escolha item, cômodo ou parede, digite nome, largura e profundidade (com − e +) e a cor.
+  - Um cômodo pode ter paredes ao redor (10, 15, 20 ou 25 cm). Elas crescem junto quando você redimensiona.
+  - O item novo cai no centro do cômodo selecionado.
+- **Mover e redimensionar.** Arraste o item. As alças nos cantos mudam o tamanho. O ímã gruda nas bordas dos outros itens.
+- **Medidas como no desenho do cooktop.** Com um item selecionado aparecem duas cadeias de cotas:
+  - à esquerda, *folga · profundidade · folga*; embaixo, *folga · largura · folga*;
+  - os totais de onde o item está, que pode ser o cômodo ou outro item (ex.: o cooktop dentro da bancada).
+- **Distâncias editáveis.** No painel, digite "10 cm até a parede de cima" e o item vai para lá.
+- **Aparência.** Seis cores, texturas (rachura, cruzada, pontos, linhas, tijolo) e ícones de móveis vistos de cima.
+- **Ampliar.** Belisque, use a roda do mouse, os botões − ⤢ + ou toque duas vezes num item para aproximar até ele. Uma régua de escala acompanha o zoom.
+- **Compartilhar.**
+  - Link com o projeto dentro do endereço: quem abre recebe uma cópia, e nada vai para servidor.
+  - PNG do andar e PDF em A4, uma página por andar, com escala.
+  - Arquivo `.json` para guardar e importar, e backup de tudo.
+  - Para importar, também dá para arrastar o arquivo para a página.
+- **Desfazer e refazer**, tema claro e escuro, e atalhos de teclado: `N` novo, `Del` excluir, `Ctrl+Z`/`Ctrl+Y`, `Ctrl+D` duplicar, setas para mover, `+`/`−` para zoom.
+
+## Rodar no computador
+
+```bash
+npm run dev
+```
+
+Abre em `http://localhost:5180`. O servidor imita o GitHub Pages: um caminho que não existe recebe a página `404.html`.
+
+## Testes
+
+```bash
+npm test
+```
+
+Testam folgas, cadeia de cotas, paredes do cômodo, importação e sanitização, o PDF gerado e o link de compartilhar.
+
+## Publicar no GitHub Pages
+
+O esquema é o mesmo do Escritório Virtual: o site vai para a raiz do branch `gh-pages`, com `.nojekyll`, `404.html` e, se houver domínio próprio, `CNAME`.
+
+```bash
+node scripts/deploy.mjs --remote git@github.com:UPraggy/PlantaFacil.git
+```
+
+Com domínio próprio (no escritório: `lnoffice.rafaelmr.com.br`):
+
+```bash
+node scripts/deploy.mjs --remote git@github.com:UPraggy/PlantaFacil.git --cname planta.rafaelmr.com.br
+```
+
+- **Sem repetir opções:** guarde-as em `deploy.config.json` (`{ "remote": "...", "cname": "" }`) e rode só `npm run deploy`. Se a pasta já for um repositório git, ele usa o `origin`.
+- **Ensaio:** `--dry` monta tudo em `.cache/gh-pages` sem enviar.
+- **Primeira vez:** no GitHub, *Settings › Pages › Deploy from a branch › gh-pages / (root)*.
+- **Domínio próprio:** crie um registro DNS `CNAME` apontando para `upraggy.github.io`.
+- **404:** o script troca o `__BASE__` do `404.html` pelo caminho certo, `/PlantaFacil/` ou `/` com domínio.
+
+## Organização
+
+| Arquivo | Papel |
+|---|---|
+| `index.html`, `style.css` | Tela e visual: identidade Rafael MR, blueprint, periwinkle e âmbar |
+| `js/dados.js` | Modelo, sanitização, `localStorage`, importar e exportar `.json` |
+| `js/desenho.js` | Desenho em SVG: itens, paredes, texturas, ícones, folgas e cotas em cadeia |
+| `js/exportar.js` | PNG, PDF (escrito à mão, sem biblioteca) e link de compartilhar |
+| `js/app.js` | Gestos, painel, formulário de adicionar, andares, projetos, animações |
+| `404.html` | Página de endereço inexistente |
+| `scripts/serve.mjs`, `scripts/deploy.mjs` | Servidor local e publicação no `gh-pages` |
+
+As medidas são sempre em centímetros. No cômodo, `x/y/largura/profundidade` são o vão livre e as paredes ficam do lado de fora.

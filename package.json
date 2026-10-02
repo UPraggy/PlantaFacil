@@ -1,0 +1,11 @@
+{
+  "name": "planta-facil",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Planta fácil: desenhe plantas com andares, cômodos, paredes e móveis, com medidas e folgas. Site estático para o GitHub Pages.",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node test/logica.test.js",
+    "deploy": "node scripts/deploy.mjs"
+  }
+}
