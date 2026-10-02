@@ -15,7 +15,8 @@
   // Aberturas nas paredes do cômodo. pos = distância do canto: da esquerda (lados c/b) ou de cima (lados e/d).
   const TIPOS_ABERTURA = ['janela', 'porta', 'vao'];
   const LARGURA_ABERTURA = { janela: 120, porta: 80, vao: 90 };
-  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true };
+  // exp*: o que vai nos arquivos exportados (independe dos botões da tela). Por padrão, tudo.
+  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: true, expTotal: true };
   // Valores iniciais do formulário "Adicionar" (o usuário digita o tamanho que quiser).
   const NOVO_PADRAO = {
     item: { nome: '', w: 100, h: 60, cor: 'azul' },
@@ -90,6 +91,7 @@
       config: {
         encaixe: ENCAIXES.includes(Number(c.encaixe)) ? Number(c.encaixe) : CONFIG_PADRAO.encaixe,
         ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total, travado: !!c.travado, lista: !!c.lista,
+        expMedidas: !!c.expMedidas, expFolgas: !!c.expFolgas, expTotal: !!c.expTotal,
       },
     };
   }
