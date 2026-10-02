@@ -10,11 +10,16 @@
   const SIMBOLOS = ['cooktop', 'geladeira', 'pia', 'sofa', 'poltrona', 'cama', 'mesa', 'cadeira', 'vaso', 'box', 'porta', 'janela', 'armario', 'estante', 'rack'];
   const ENCAIXES = [1, 5, 10];
   const ESPESSURAS = [0, 10, 15, 20, 25];
-  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false };
+  const LADOS = 'cdbe'; // lados do cômodo com parede: c = cima, d = direita, b = baixo, e = esquerda
+  const GIROS = [0, 90, 180, 270];
+  // Aberturas nas paredes do cômodo. pos = distância do canto: da esquerda (lados c/b) ou de cima (lados e/d).
+  const TIPOS_ABERTURA = ['janela', 'porta', 'vao'];
+  const LARGURA_ABERTURA = { janela: 120, porta: 80, vao: 90 };
+  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false };
   // Valores iniciais do formulário "Adicionar" (o usuário digita o tamanho que quiser).
   const NOVO_PADRAO = {
     item: { nome: '', w: 100, h: 60, cor: 'azul' },
-    comodo: { nome: '', w: 400, h: 300, cor: 'cinza', parede: 15 },
+    comodo: { nome: '', w: 400, h: 300, cor: 'cinza', parede: 15, lados: LADOS },
     parede: { nome: '', w: 300, h: 15, cor: 'cinza' },
   };
 
@@ -23,6 +28,18 @@
   const num = (v, pad, min, max) => { v = Number(v); return Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : pad; };
   const texto = (v, pad, max) => { const s = String(v == null ? '' : v).trim().slice(0, max); return s || pad; };
   const corPadrao = tipo => (tipo === 'item' ? 'azul' : 'cinza');
+  // Normaliza os lados com parede: só c/d/b/e, sem repetir, na ordem cdbe. Sem valor = os quatro.
+  const limparLados = v => (v == null ? LADOS : [...LADOS].filter(k => String(v).includes(k)).join(''));
+  function limparAberturas(v, manterId) {
+    if (!Array.isArray(v)) return [];
+    return v.filter(a => a && typeof a === 'object').slice(0, 40).map(a => ({
+      id: manterId && a.id ? String(a.id) : uid(),
+      lado: ['c', 'd', 'b', 'e'].includes(a.lado) ? a.lado : 'c',
+      pos: num(a.pos, 0, 0, 1e5),
+      larg: num(a.larg, 100, 5, 1e4),
+      tipo: TIPOS_ABERTURA.includes(a.tipo) ? a.tipo : 'janela',
+    }));
+  }
 
   // ---------- sanitização (usada ao carregar e ao importar) ----------
   function limparItem(i, manterId) {
@@ -40,6 +57,10 @@
       textura: TEXTURAS.includes(i.textura) ? i.textura : 'liso',
       simbolo: tipo === 'item' && SIMBOLOS.includes(i.simbolo) ? i.simbolo : '',
       parede: tipo === 'comodo' ? num(i.parede, 0, 0, 100) : 0, // espessura das paredes ao redor do cômodo
+      lados: tipo === 'comodo' ? limparLados(i.lados) : '',     // quais lados têm parede
+      giro: GIROS.includes(Number(i.giro)) ? Number(i.giro) : 0, // para onde o ícone está virado (90° por vez)
+      aberturas: tipo === 'comodo' ? limparAberturas(i.aberturas, manterId) : [], // janelas, portas e vãos nas paredes
+      travado: !!i.travado, // travado: não move nem muda de tamanho arrastando
     };
   }
 
@@ -68,7 +89,7 @@
       andares,
       config: {
         encaixe: ENCAIXES.includes(Number(c.encaixe)) ? Number(c.encaixe) : CONFIG_PADRAO.encaixe,
-        ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total,
+        ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total, travado: !!c.travado,
       },
     };
   }
@@ -108,8 +129,18 @@
     return limparItem({
       tipo, x, y, w, h,
       nome: texto(spec.nome, `${ROTULO[tipo]} ${n}`, 60),
-      cor: spec.cor, textura: 'liso', simbolo: '', parede: spec.parede,
+      cor: spec.cor, textura: 'liso', simbolo: '', parede: spec.parede, lados: spec.lados, giro: 0,
     }, false);
+  }
+
+  // Abertura nova no primeiro lado com parede (cima, baixo, esquerda, direita), centrada. null se não há parede.
+  function novaAbertura(comodo, tipo) {
+    const lados = comodo.parede > 0 ? (comodo.lados == null ? LADOS : comodo.lados) : '';
+    const lado = ['c', 'b', 'e', 'd'].find(k => lados.includes(k));
+    if (!lado) return null;
+    const comp = lado === 'c' || lado === 'b' ? comodo.w : comodo.h;
+    const larg = Math.max(5, Math.min(LARGURA_ABERTURA[tipo] || 100, comp - 20));
+    return { id: uid(), lado, tipo: TIPOS_ABERTURA.includes(tipo) ? tipo : 'janela', larg, pos: Math.max(0, Math.round((comp - larg) / 2)) };
   }
 
   // ---------- armazenamento local ----------
@@ -156,7 +187,7 @@
   }
 
   PF.dados = {
-    TIPOS, ROTULO, CORES, TEXTURAS, SIMBOLOS, ENCAIXES, ESPESSURAS, CONFIG_PADRAO, NOVO_PADRAO,
+    TIPOS, ROTULO, CORES, TEXTURAS, SIMBOLOS, ENCAIXES, ESPESSURAS, LADOS, TIPOS_ABERTURA, CONFIG_PADRAO, NOVO_PADRAO, limparLados, novaAbertura,
     uid, clonar, carregar, salvarAgora, agendarSalvar,
     novoProjeto, novoAndar, duplicarProjeto, duplicarAndar, novoItem,
     paraArquivo, paraBackup, paraImportar, limparProjeto,

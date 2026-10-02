@@ -184,14 +184,17 @@
   function empacotar(proj) {
     return {
       v: 1, n: proj.nome, c: proj.config,
-      a: proj.andares.map(a => ({ n: a.nome, i: a.itens.map(i => [i.tipo, i.nome, r1(i.x), r1(i.y), r1(i.w), r1(i.h), i.cor, i.textura || 'liso', i.simbolo || '', i.parede || 0]) })),
+      a: proj.andares.map(a => ({ n: a.nome, i: a.itens.map(i => [i.tipo, i.nome, r1(i.x), r1(i.y), r1(i.w), r1(i.h), i.cor, i.textura || 'liso', i.simbolo || '', i.parede || 0, i.lados == null ? 'cdbe' : i.lados, i.giro || 0, (i.aberturas || []).map(b => [b.lado, r1(b.pos), r1(b.larg), b.tipo]), i.travado ? 1 : 0]) })),
     };
   }
   function desempacotar(o) {
     if (!o || o.v !== 1 || !Array.isArray(o.a)) throw new Error('link inválido');
     return {
       nome: o.n, config: o.c,
-      andares: o.a.map(a => ({ nome: a.n, itens: a.i.map(([tipo, nome, x, y, w, h, cor, textura, simbolo, parede]) => ({ tipo, nome, x, y, w, h, cor, textura, simbolo, parede })) })),
+      andares: o.a.map(a => ({ nome: a.n, itens: a.i.map(([tipo, nome, x, y, w, h, cor, textura, simbolo, parede, lados, giro, ab, travado]) => ({
+        tipo, nome, x, y, w, h, cor, textura, simbolo, parede, lados, giro, travado: !!travado,
+        aberturas: Array.isArray(ab) ? ab.map(([lado, pos, larg, tipoA]) => ({ lado, pos, larg, tipo: tipoA })) : [],
+      })) })),
     };
   }
   function paraB64(bytes) {

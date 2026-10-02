@@ -39,6 +39,10 @@
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-more" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></symbol>
+  <symbol id="i-front" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5V4H4v11h1"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="2"/><path d="M19 9v10H9"/></symbol>
 </svg>
 
 <div id="app">
@@ -64,6 +68,7 @@
       <button type="button" data-ver="medidas" aria-pressed="true" title="Mostrar largura × profundidade dentro dos itens">Medidas</button>
       <button type="button" data-ver="folgas" aria-pressed="false" title="Mostrar a folga entre todos os itens">Folgas</button>
       <button type="button" data-ver="total" aria-pressed="false" title="Mostrar a medida total da planta">Total</button>
+      <button type="button" data-ver="travado" class="trava" aria-pressed="false" title="Travar a planta: arrastar só mexe a vista, nada sai do lugar"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span>Travar</span></button>
     </div>
 
     <div id="vazio" hidden>
@@ -97,6 +102,7 @@
           <small class="rot" id="pTipoTxt">Item</small>
           <input id="pNome" type="text" maxlength="60" autocomplete="off" placeholder="Dê um nome" aria-label="Nome">
         </label>
+        <button class="icone cadeado" id="pTravar" type="button" aria-pressed="false" aria-label="Travar este item" title="Travar: não sai do lugar ao arrastar"><svg class="ic" aria-hidden="true"><use href="#i-unlock"/></svg></button>
         <button class="btn primario ok" id="pFechar" type="button"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>OK</button>
       </div>
 
@@ -130,8 +136,25 @@
       </div>
 
       <div id="pParedes" class="bloco extra" hidden>
-        <p class="rot">Paredes ao redor</p>
-        <div class="seg" id="pParedesSeg" role="group" aria-label="Espessura das paredes"></div>
+        <p class="rot">Paredes <span class="dica-rot">toque num lado para ligar ou desligar</span></p>
+        <div class="paredes-editor">
+          <div id="pLados"></div>
+          <div class="paredes-lado">
+            <p class="paredes-resumo" id="pLadosTxt"></p>
+            <p class="rot">Espessura (cm)</p>
+            <div class="seg" id="pParedesSeg" role="group" aria-label="Espessura das paredes"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pAberturas" class="bloco extra" hidden>
+        <p class="rot">Janelas, portas e vãos</p>
+        <div class="aberturas" id="pAbertLista"></div>
+        <div class="par-add">
+          <button type="button" class="btn" data-abertura="janela"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Janela</button>
+          <button type="button" class="btn" data-abertura="porta"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Porta</button>
+          <button type="button" class="btn" data-abertura="vao"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Vão</button>
+        </div>
       </div>
 
       <div id="pCoresBloco" class="bloco extra">
@@ -153,6 +176,14 @@
             <button type="button" data-tipo="comodo">Cômodo</button>
             <button type="button" data-tipo="parede">Parede</button>
           </div>
+        </div>
+        <div class="bloco">
+          <p class="rot">O que fica na frente</p>
+          <div class="acoes-item">
+            <button type="button" class="btn" id="pFrente"><svg class="ic" aria-hidden="true"><use href="#i-front"/></svg>Trazer para frente</button>
+            <button type="button" class="btn" id="pTras"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg>Enviar para trás</button>
+          </div>
+          <p class="nota">Dica: toque de novo no mesmo lugar para pegar o item que está atrás.</p>
         </div>
         <div class="bloco" id="pIconesBloco">
           <p class="rot">Ícone (vista de cima)</p>

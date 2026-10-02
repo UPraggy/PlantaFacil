@@ -11,7 +11,7 @@
   let temaPref = 'auto', tema = DES.TEMAS.escuro;
   const hist = { pilha: [], i: -1 };
   const ptrs = new Map();
-  let gesto = null, quadro = 0, tAviso = 0, tVista = 0, tFalha = 0, imaAntes = false, andarNovo = null, ultimoToque = null;
+  let gesto = null, quadro = 0, tAviso = 0, tVista = 0, tFalha = 0, tCiclo = 0, imaAntes = false, andarNovo = null, ultimoToque = null;
 
   // ---------- movimento ----------
   // Tokens do Visual Inspector (motion_tokens_generate): fast 160, base 240, slow 400 ms; stagger 40–70 ms.
@@ -100,6 +100,24 @@
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, parar));
     btn.addEventListener('click', e => { if (e.detail === 0) { passo(); if (aoSoltar) aoSoltar(); } }); // teclado
+  }
+
+  // Editor dos lados com parede: quatro botões em volta de um quadradinho. aoTrocar(lado) decide o que fazer.
+  const NOME_LADO = { c: 'em cima', d: 'à direita', b: 'embaixo', e: 'à esquerda' };
+  function editorLados(aoTrocar) {
+    const caixa = h('div', { class: 'lados', role: 'group', 'aria-label': 'Quais lados têm parede' }, h('span', { class: 'lados-miolo', 'aria-hidden': 'true' }));
+    const botoes = {};
+    for (const k of 'cdbe') {
+      botoes[k] = h('button', { type: 'button', 'data-lado': k, 'aria-label': 'Parede ' + NOME_LADO[k], title: 'Parede ' + NOME_LADO[k], onclick: () => aoTrocar(k) });
+      caixa.append(botoes[k]);
+    }
+    return { el: caixa, marcar: lados => { for (const k of 'cdbe') botoes[k].setAttribute('aria-pressed', String(lados.includes(k))); } };
+  }
+  const alternarLado = (lados, k) => D.limparLados(lados.includes(k) ? lados.replace(k, '') : lados + k);
+  function resumoLados(lados) {
+    if (!lados) return 'Sem paredes';
+    const abertos = [...'cdbe'].filter(k => !lados.includes(k)).map(k => NOME_LADO[k]);
+    return `${lados.length} parede${lados.length > 1 ? 's' : ''}${abertos.length ? ' · aberto ' + abertos.join(' e ') : ''}`;
   }
 
   // ---------- tema ----------
@@ -283,7 +301,8 @@
       s += `<path d="M${g.x1} ${g.y1}L${g.x2} ${g.y2}" stroke="${tema.acento}" stroke-width="${1 / z}" stroke-dasharray="${4 / z} ${3 / z}" fill="none"/>`;
     }
     const sel = itemSel();
-    if (sel) {
+    palco.classList.toggle('travado', !!proj.config.travado);
+    if (sel && !travado(sel)) {
       for (const a of alcasDe(sel, z)) {
         s += `<circle cx="${a.x}" cy="${a.y}" r="${(6.5 / z) * Math.max(0, pop)}" fill="${tema.fundo}" stroke="${tema.acento}" stroke-width="${2 / z}"/>`;
       }
@@ -295,7 +314,10 @@
   }
 
   // ---------- seleção e acertos ----------
-  function itemEm(px, py) {
+  function itemEm(px, py) { return itensEm(px, py)[0] || null; }
+  // Todos os itens sob o ponto, do que está na frente para o de trás.
+  function itensEm(px, py) {
+    const achados = [];
     const z = andar.vista.z, tol = 8 / z;
     for (const tipo of ['item', 'parede', 'comodo']) {
       for (let k = andar.itens.length - 1; k >= 0; k--) {
@@ -303,19 +325,20 @@
         if (i.tipo !== tipo) continue;
         if (tipo === 'comodo') {
           // O cômodo é pego pela borda (ou pelas paredes) e pelo nome; o miolo fica livre para mover a vista e os itens.
-          const ext = tol + (i.parede || 0);
-          if (px < i.x - ext || px > i.x + i.w + ext || py < i.y - ext || py > i.y + i.h + ext) continue;
+          const b = DES.limites(i);
+          if (px < b.x - tol || px > b.x + b.w + tol || py < b.y - tol || py > b.y + b.h + tol) continue;
           const borda = px < i.x + tol || px > i.x + i.w - tol || py < i.y + tol || py > i.y + i.h - tol;
           const etiqueta = px <= i.x + 160 / z && py <= i.y + 44 / z;
-          if (borda || etiqueta) return i;
+          if (borda || etiqueta) achados.push(i);
         } else {
           const ex = Math.max(3 / z, (18 / z - i.w) / 2), ey = Math.max(3 / z, (18 / z - i.h) / 2);
-          if (px >= i.x - ex && px <= i.x + i.w + ex && py >= i.y - ey && py <= i.y + i.h + ey) return i;
+          if (px >= i.x - ex && px <= i.x + i.w + ex && py >= i.y - ey && py <= i.y + i.h + ey) achados.push(i);
         }
       }
     }
-    return null;
+    return achados;
   }
+  const travado = i => !!(proj.config.travado || (i && i.travado));
 
   function selecionar(id) {
     if (selId === id) return;
@@ -326,8 +349,8 @@
   }
 
   // ---------- ímã nas bordas ----------
-  const bordasX = o => (o.tipo === 'comodo' && o.parede ? [o.x, o.x + o.w, o.x - o.parede, o.x + o.w + o.parede] : [o.x, o.x + o.w]);
-  const bordasY = o => (o.tipo === 'comodo' && o.parede ? [o.y, o.y + o.h, o.y - o.parede, o.y + o.h + o.parede] : [o.y, o.y + o.h]);
+  const bordasX = o => { const b = DES.limites(o); return b.w !== o.w ? [o.x, o.x + o.w, b.x, b.x + b.w] : [o.x, o.x + o.w]; };
+  const bordasY = o => { const b = DES.limites(o); return b.h !== o.h ? [o.y, o.y + o.h, b.y, b.y + b.h] : [o.y, o.y + o.h]; };
   function alinhar(meus, alvos, lim) {
     let melhor = null;
     for (const m of meus) for (const a of alvos) {
@@ -358,11 +381,11 @@
   function passar(e) {
     const p = posTela(e), sel = itemSel();
     let cursor = 'default', alvo = null;
-    const al = sel && alcaProxima(sel, p);
+    const al = sel && !travado(sel) && alcaProxima(sel, p);
     if (al) cursor = al.hx && al.hy ? (al.hx * al.hy > 0 ? 'nwse-resize' : 'nesw-resize') : (al.hx ? 'ew-resize' : 'ns-resize');
     else {
       const q = plano(p.x, p.y), i = itemEm(q.x, q.y);
-      if (i) { cursor = 'move'; alvo = i.id; }
+      if (i) { cursor = travado(i) ? 'pointer' : 'move'; alvo = i.id; }
     }
     if (tela.style.cursor !== cursor) tela.style.cursor = cursor;
     if (alvo !== hoverId) { hoverId = alvo; agendar(); }
@@ -394,17 +417,22 @@
     if (e.button === 1) { gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false }; return; }
     const sel = itemSel();
     const q = plano(p.x, p.y);
-    if (sel) {
+    if (sel && !travado(sel)) {
       const al = alcaProxima(sel, p);
       if (al) {
         gesto = { tipo: 'redim', id: sel.id, al, orig: { x: sel.x, y: sel.y, w: sel.w, h: sel.h }, desl: { x: q.x - al.x, y: q.y - al.y }, moveu: false };
         return;
       }
     }
-    const alvo = itemEm(q.x, q.y);
+    const sob = itensEm(q.x, q.y);
+    const jaSel = sel && sob.some(i => i.id === sel.id);
+    const alvo = jaSel ? sel : sob[0];
     if (alvo) {
       selecionar(alvo.id);
-      gesto = { tipo: 'mover', id: alvo.id, orig: { x: alvo.x, y: alvo.y, w: alvo.w, h: alvo.h }, ini: p, moveu: false };
+      const ciclo = jaSel && sob.length > 1 ? sob.map(i => i.id) : null; // tocar de novo pega o de trás
+      gesto = travado(alvo)
+        ? { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false, toque: alvo.id, ciclo }
+        : { tipo: 'mover', id: alvo.id, orig: { x: alvo.x, y: alvo.y, w: alvo.w, h: alvo.h }, ini: p, moveu: false, ciclo };
     } else {
       gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false };
     }
@@ -478,10 +506,18 @@
     palco.classList.remove('arrastando-item');
     if (!g) return;
     const toque = e.type === 'pointerup' && !g.moveu && (g.tipo === 'pan' || g.tipo === 'mover');
-    if (toque && toqueDuplo(p, g.tipo === 'mover' ? g.id : null)) { agendar(); return; }
+    clearTimeout(tCiclo);
+    if (toque && toqueDuplo(p, g.tipo === 'mover' ? g.id : g.toque || null)) { agendar(); return; }
+    if (toque && g.ciclo) {
+      // espera um instante: se vier um segundo toque é zoom, senão passa para o item de trás
+      tCiclo = setTimeout(() => {
+        const k = g.ciclo.indexOf(selId), prox = g.ciclo[(k + 1) % g.ciclo.length];
+        if (prox && prox !== selId) selecionar(prox);
+      }, 330);
+    }
     if (g.tipo === 'pan') {
       if (g.moveu) salvar();
-      else if (toque && selId) selecionar(null);
+      else if (toque && !g.toque && selId) selecionar(null);
     } else if ((g.tipo === 'mover' || g.tipo === 'redim') && g.moveu) {
       commit();
     } else if (g.tipo === 'pinca' || g.tipo === 'espera') {
@@ -554,7 +590,12 @@
       set(DIST.c, arred(i.y - c.y)); set(DIST.b, arred(c.y + c.h - i.y - i.h));
     }
     $('pParedes').hidden = i.tipo !== 'comodo';
-    document.querySelectorAll('#pParedesSeg button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.esp) === (i.parede || 0))));
+    const lados = DES.ladosDe(i);
+    edLados.marcar(lados);
+    $('pLadosTxt').textContent = resumoLados(lados);
+    document.querySelectorAll('#pParedesSeg button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.esp) === (lados ? i.parede : 0))));
+    const giro = i.tipo === 'comodo' ? 'Girar o cômodo 90° com tudo que está dentro (R)' : 'Girar 90° (R)';
+    $('pGirar').title = giro; $('pGirar').setAttribute('aria-label', giro);
     $('pCoresBloco').hidden = parede;
     document.querySelectorAll('#pCores button').forEach(b => {
       b.setAttribute('aria-pressed', String(b.dataset.cor === i.cor));
@@ -563,7 +604,14 @@
     document.querySelectorAll('#pTexturas button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.textura === (i.textura || 'liso'))));
     $('pIconesBloco').hidden = i.tipo !== 'item';
     document.querySelectorAll('#pIcones button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.simbolo === (i.simbolo || ''))));
-    $('pDica').textContent = i.tipo === 'comodo' ? 'Arraste pela parede ou pelo nome para mover o cômodo. Os itens dentro dele ficam soltos para arrastar.' : '';
+    const trav = !!i.travado;
+    $('pTravar').setAttribute('aria-pressed', String(trav));
+    $('pTravar').querySelector('use').setAttribute('href', trav ? '#i-lock' : '#i-unlock');
+    $('pTravar').title = trav ? 'Travado: toque para destravar' : 'Travar: não sai do lugar ao arrastar';
+    $('pTravar').setAttribute('aria-label', trav ? 'Destravar este item' : 'Travar este item');
+    $('pAberturas').hidden = i.tipo !== 'comodo';
+    if (i.tipo === 'comodo') montarAberturas(i);
+    $('pDica').textContent = trav ? 'Travado: arrastar só mexe a vista. Pelo painel ainda dá para mudar as medidas.' : i.tipo === 'comodo' ? 'Arraste pela parede ou pelo nome para mover o cômodo. Os itens dentro dele ficam soltos para arrastar.' : '';
   }
 
   P.nome.addEventListener('input', () => { const i = itemSel(); if (!i) return; i.nome = P.nome.value; mudou(); agendar(); });
@@ -610,9 +658,23 @@
     commit(); atualizarPainel(); agendar();
   }));
   D.ESPESSURAS.forEach(esp => $('pParedesSeg').append(h('button', {
-    type: 'button', 'data-esp': esp,
-    onclick: () => { const i = itemSel(); if (!i) return; i.parede = esp; commit(); atualizarPainel(); agendar(); },
-  }, esp ? `${esp} cm` : 'Sem')));
+    type: 'button', 'data-esp': esp, 'aria-label': esp ? `Paredes de ${esp} cm` : 'Sem paredes',
+    onclick: () => {
+      const i = itemSel(); if (!i) return;
+      i.parede = esp;
+      if (esp && !i.lados) i.lados = D.LADOS;
+      commit(); atualizarPainel(); agendar();
+    },
+  }, esp ? String(esp) : 'Sem')));
+  const edLados = editorLados(k => {
+    const i = itemSel();
+    if (!i || i.tipo !== 'comodo') return;
+    const atual = DES.ladosDe(i);
+    i.lados = atual ? alternarLado(atual, k) : k; // sem paredes: o lado tocado vira a primeira parede
+    if (!i.parede) i.parede = 15;
+    vibrar(6); commit(); atualizarPainel(); agendar();
+  });
+  $('pLados').append(edLados.el);
   D.CORES.forEach(c => $('pCores').append(h('button', {
     type: 'button', class: 'cor', 'data-cor': c, 'aria-label': 'Cor ' + c,
     onclick: () => { const i = itemSel(); if (!i) return; i.cor = c; commit(); atualizarPainel(); agendar(); },
@@ -634,14 +696,17 @@
     if (s) b.innerHTML = DES.iconeSimbolo(s); else b.append(icone('x'));
     $('pIcones').append(b);
   });
-  $('pGirar').addEventListener('click', () => {
+  function girarSelecionado() {
     const i = itemSel();
     if (!i) return;
-    const cx = i.x + i.w / 2, cy = i.y + i.h / 2;
-    [i.w, i.h] = [i.h, i.w];
-    i.x = cx - i.w / 2; i.y = cy - i.h / 2;
+    const antes = new Set(andar.itens.map(o => o.id + ':' + o.x + ':' + o.y));
+    const n = DES.girar(i, andar.itens);
+    entrar(andar.itens.filter(o => o.id !== i.id && !antes.has(o.id + ':' + o.x + ':' + o.y)).map(o => o.id), 12);
+    pulsar(i.id);
     commit(); atualizarPainel(); agendar();
-  });
+    if (i.tipo === 'comodo') aviso(n ? `“${nomeDe(i)}” girou com ${plural(n, 'item', 'itens')} dentro` : `“${nomeDe(i)}” girou`);
+  }
+  $('pGirar').addEventListener('click', girarSelecionado);
   $('pDup').addEventListener('click', () => {
     const i = itemSel();
     if (!i) return;
@@ -652,6 +717,77 @@
     commit(); atualizarPainel(); agendar();
   });
   $('pDel').addEventListener('click', () => remover(selId));
+  $('pTravar').addEventListener('click', () => {
+    const i = itemSel(); if (!i) return;
+    i.travado = !i.travado;
+    vibrar(10); commit(); atualizarPainel(); agendar();
+    aviso(i.travado ? `“${nomeDe(i)}” travado: não sai do lugar ao arrastar` : `“${nomeDe(i)}” destravado`);
+  });
+  function mudarOrdem(frente) {
+    const i = itemSel(); if (!i) return;
+    const k = andar.itens.indexOf(i);
+    andar.itens.splice(k, 1);
+    if (frente) andar.itens.push(i); else andar.itens.unshift(i);
+    pulsar(i.id); commit(); agendar();
+    aviso(frente ? 'Trazido para a frente' : 'Enviado para trás');
+  }
+  $('pFrente').addEventListener('click', () => mudarOrdem(true));
+  $('pTras').addEventListener('click', () => mudarOrdem(false));
+
+  // ---------- aberturas (janela, porta, vão) do cômodo ----------
+  const NOME_ABERTURA = { janela: 'Janela', porta: 'Porta', vao: 'Vão' };
+  const NOME_LADO_CURTO = { c: 'Parede de cima', d: 'Parede da direita', b: 'Parede de baixo', e: 'Parede da esquerda' };
+  let assinaturaAberturas = '';
+  function montarAberturas(i) {
+    const lista = $('pAbertLista');
+    const assin = i.id + '|' + (i.aberturas || []).map(a => a.id + a.tipo + a.lado).join(',') + '|' + DES.ladosDe(i);
+    const foco = document.activeElement;
+    if (assin === assinaturaAberturas) {
+      // só atualiza os valores (sem recriar os campos, para não perder o foco)
+      lista.querySelectorAll('[data-ab]').forEach(el => {
+        const a = (i.aberturas || []).find(x => x.id === el.dataset.ab);
+        if (!a) return;
+        const [pos, larg] = el.querySelectorAll('input');
+        if (pos !== foco) pos.value = arred(a.pos);
+        if (larg !== foco) larg.value = arred(a.larg);
+      });
+      return;
+    }
+    assinaturaAberturas = assin;
+    const ladosComParede = DES.ladosDe(i);
+    lista.replaceChildren(...(i.aberturas || []).map(a => {
+      const tipo = h('select', { 'aria-label': 'Tipo de abertura', onchange: () => { a.tipo = tipo.value; commit(); atualizarPainel(); agendar(); } },
+        D.TIPOS_ABERTURA.map(t => h('option', { value: t, selected: t === a.tipo }, NOME_ABERTURA[t])));
+      const lado = h('select', { 'aria-label': 'Em qual parede', onchange: () => { a.lado = lado.value; a.pos = 0; commit(); atualizarPainel(); agendar(); } },
+        [...'cdbe'].map(k => h('option', { value: k, selected: k === a.lado, disabled: !ladosComParede.includes(k) && k !== a.lado }, NOME_LADO_CURTO[k])));
+      const sairBtn = h('button', { type: 'button', class: 'icone perigo', 'aria-label': 'Tirar esta abertura', title: 'Tirar',
+        onclick: () => { i.aberturas = i.aberturas.filter(x => x !== a); commit(); atualizarPainel(); agendar(); } }, icone('trash'));
+      const campo = (rotulo, chave, minimo) => {
+        const input = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: String(arred(a[chave])), 'aria-label': rotulo + ' em centímetros' });
+        const aplicar = v => { const comp = a.lado === 'c' || a.lado === 'b' ? i.w : i.h; a[chave] = Math.max(minimo, Math.min(v, chave === 'larg' ? comp : comp - a.larg)); mudou(); agendar(); };
+        input.addEventListener('input', () => { const v = num(input); if (Number.isFinite(v)) aplicar(v); });
+        input.addEventListener('change', () => { commit(); atualizarPainel(); });
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+        const passo = dir => () => { aplicar(Math.round((a[chave] + dir * proj.config.encaixe) / proj.config.encaixe) * proj.config.encaixe); input.value = String(arred(a[chave])); };
+        const menos = h('button', { type: 'button', class: 'passo', 'aria-label': 'Diminuir ' + rotulo }, '−');
+        const mais = h('button', { type: 'button', class: 'passo', 'aria-label': 'Aumentar ' + rotulo }, '+');
+        segurar(menos, passo(-1), commit); segurar(mais, passo(1), commit);
+        return { input, el: h('label', { class: 'campo-num' }, h('span', { class: 'rot' }, rotulo), h('span', { class: 'stepper' }, menos, h('span', { class: 'campo' }, input, h('i', {}, 'cm')), mais)) };
+      };
+      const horiz = a.lado === 'c' || a.lado === 'b';
+      const cPos = campo(horiz ? 'Da esquerda' : 'De cima', 'pos', 0), cLarg = campo('Largura', 'larg', 5);
+      return h('div', { class: 'abertura', 'data-ab': a.id },
+        h('div', { class: 'abertura-topo' }, tipo, lado, sairBtn),
+        h('div', { class: 'medidas' }, cPos.el, cLarg.el));
+    }));
+  }
+  document.querySelectorAll('[data-abertura]').forEach(b => b.addEventListener('click', () => {
+    const i = itemSel(); if (!i || i.tipo !== 'comodo') return;
+    const a = D.novaAbertura(i, b.dataset.abertura);
+    if (!a) { aviso('Ligue pelo menos uma parede antes de pôr janela ou porta.'); return; }
+    i.aberturas = (i.aberturas || []).concat(a);
+    vibrar(6); commit(); atualizarPainel(); agendar();
+  }));
   $('pFechar').addEventListener('click', () => selecionar(null));
   function expandirPainel(abrir) {
     $('painel').classList.toggle('compacto', !abrir);
@@ -761,16 +897,28 @@
       onclick: () => { cor = c; marcarCor(); },
     })));
     const marcarCor = () => cores.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cor === cor)));
-    let esp = 15;
-    const paredes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Paredes ao redor' });
-    D.ESPESSURAS.forEach(v => paredes.append(h('button', { type: 'button', 'data-esp': v, onclick: () => { esp = v; marcarEsp(); } }, v ? `${v} cm` : 'Sem')));
-    const marcarEsp = () => paredes.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.esp) === esp)));
+    let esp = 15, ladosNovo = D.LADOS;
+    const paredes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Espessura das paredes' });
+    D.ESPESSURAS.forEach(v => paredes.append(h('button', {
+      type: 'button', 'data-esp': v, 'aria-label': v ? `Paredes de ${v} cm` : 'Sem paredes',
+      onclick: () => { esp = v; if (v && !ladosNovo) ladosNovo = D.LADOS; marcarEsp(); },
+    }, v ? String(v) : 'Sem')));
+    const resumoNovo = h('p', { class: 'paredes-resumo' });
+    const edNovo = editorLados(k => { ladosNovo = esp ? alternarLado(ladosNovo, k) : k; if (!esp) esp = 15; vibrar(6); marcarEsp(); });
+    const marcarEsp = () => {
+      paredes.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.esp) === (ladosNovo ? esp : 0))));
+      edNovo.marcar(esp ? ladosNovo : '');
+      resumoNovo.textContent = resumoLados(esp ? ladosNovo : '');
+    };
     let deitada = true;
     const orient = h('div', { class: 'seg', role: 'group', 'aria-label': 'Direção da parede' });
     [[true, 'Horizontal'], [false, 'Vertical']].forEach(([v, r]) => orient.append(h('button', { type: 'button', 'data-v': String(v), onclick: () => { deitada = v; marcarOrient(); } }, r)));
     const marcarOrient = () => orient.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(deitada))));
     const blocoCor = h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'Cor'), cores);
-    const blocoParedes = h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'Paredes ao redor'), paredes);
+    const blocoParedes = h('div', { class: 'bloco' },
+      h('p', { class: 'rot' }, 'Paredes ', h('span', { class: 'dica-rot' }, 'toque num lado para ligar ou desligar')),
+      h('div', { class: 'paredes-editor' }, edNovo.el,
+        h('div', { class: 'paredes-lado' }, resumoNovo, h('p', { class: 'rot' }, 'Espessura (cm)'), paredes)));
     const blocoOrient = h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'Direção'), orient);
     const erro = h('p', { class: 'erro', role: 'alert' });
     const destino = h('p', { class: 'nota destino' });
@@ -786,7 +934,7 @@
       if (tipo === 'parede') { if (a > 0) u.w = a; if (b > 0) u.h = b; u.deitada = deitada; }
       else { if (a > 0) u.w = a; if (b > 0) u.h = b; }
       if (tipo !== 'parede') u.cor = cor;
-      if (tipo === 'comodo') u.parede = esp;
+      if (tipo === 'comodo') { u.parede = esp; u.lados = ladosNovo; }
     }
     function montar() {
       const u = ultimo[tipo];
@@ -797,7 +945,7 @@
       cw.rot.textContent = tipo === 'parede' ? 'Comprimento' : 'Largura';
       ch.rot.textContent = tipo === 'parede' ? 'Espessura' : (tipo === 'comodo' ? 'Profundidade (vão livre)' : 'Profundidade');
       if (tipo === 'comodo') cw.rot.textContent = 'Largura (vão livre)';
-      cor = u.cor || 'azul'; esp = u.parede == null ? 15 : u.parede; deitada = u.deitada !== false;
+      cor = u.cor || 'azul'; esp = u.parede == null ? 15 : u.parede; ladosNovo = u.lados == null ? D.LADOS : D.limparLados(u.lados); deitada = u.deitada !== false;
       marcarCor(); marcarEsp(); marcarOrient();
       blocoCor.hidden = tipo === 'parede';
       blocoParedes.hidden = tipo !== 'comodo';
@@ -819,7 +967,7 @@
       const vazio = !andar.itens.length;
       const spec = tipo === 'parede'
         ? { tipo, nome: nome.value, w: deitada ? a : b, h: deitada ? b : a }
-        : { tipo, nome: nome.value, w: a, h: b, cor, parede: esp };
+        : { tipo, nome: nome.value, w: a, h: b, cor, parede: ladosNovo ? esp : 0, lados: ladosNovo };
       const d = destinoNovo(tipo);
       const centro = d ? { x: d.x + d.w / 2, y: d.y + d.h / 2 } : plano(W / 2, H / 2);
       const novo = D.novoItem(spec, centro.x, centro.y, andar.itens, proj.config.encaixe);
@@ -1068,6 +1216,7 @@
     const k = b.dataset.ver;
     proj.config[k] = !proj.config[k];
     atualizarPills(); mudou(); agendar();
+    if (k === 'travado') { vibrar(10); aviso(proj.config.travado ? 'Planta travada: arrastar só mexe a vista. Nada sai do lugar.' : 'Planta destravada'); atualizarPainel(); }
   }));
 
   document.addEventListener('keydown', e => {
@@ -1078,13 +1227,15 @@
     if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) refazer(); else desfazer(); }
     else if (mod && k === 'y') { e.preventDefault(); refazer(); }
     else if (mod && k === 'd') { e.preventDefault(); if (selId) $('pDup').click(); }
-    else if (e.key === 'Delete' || e.key === 'Backspace') { if (selId) { e.preventDefault(); remover(selId); } }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { if (selId) { e.preventDefault(); if (itemSel().travado) aviso('Item travado: destrave antes de excluir pelo teclado.'); else remover(selId); } }
     else if (e.key === 'Escape') selecionar(null);
     else if (e.key === '+' || e.key === '=') zoomEm({ x: W / 2, y: H / 2 }, 1.5);
     else if (e.key === '-') zoomEm({ x: W / 2, y: H / 2 }, 1 / 1.5);
     else if (k === 'n' && !mod) { e.preventDefault(); menuAdicionar(); }
+    else if (k === 'r' && !mod && selId) { e.preventDefault(); girarSelecionado(); }
     else if (e.key.startsWith('Arrow') && selId) {
       e.preventDefault();
+      if (travado(itemSel())) { aviso('Travado: destrave para mover.'); return; }
       const i = itemSel(), passo = proj.config.encaixe * (e.shiftKey ? 10 : 1);
       if (e.key === 'ArrowLeft') i.x -= passo; else if (e.key === 'ArrowRight') i.x += passo;
       else if (e.key === 'ArrowUp') i.y -= passo; else i.y += passo;

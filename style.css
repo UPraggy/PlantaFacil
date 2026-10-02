@@ -17,7 +17,7 @@
   --bg: #11131C; --bg2: #171A26; --bg3: #1F2333;
   --linha: rgba(157, 177, 234, .16); --linha2: rgba(157, 177, 234, .3);
   --fg: #F1EDE2; --fg2: #B4B8CC; --fg3: #8087A0;
-  --acento: #EAA94E; --azul: #9DB1EA; --folga: #F08A72; --perigo: #F08A72;
+  --acento: #EAA94E; --azul: #9DB1EA; --folga: #F08A72; --perigo: #F08A72; --parede: #8C9BCB;
   --veu: rgba(5, 6, 10, .62); --sombra: 0 10px 30px rgba(0, 0, 0, .45);
 }
 :root[data-tema='claro'] {
@@ -25,7 +25,7 @@
   --bg: #F6F3EA; --bg2: #FCFAF5; --bg3: #EDE9DC;
   --linha: rgba(27, 30, 43, .13); --linha2: rgba(27, 30, 43, .28);
   --fg: #1B1E2B; --fg2: #4E5266; --fg3: #5F6378;
-  --acento: #9A5F12; --azul: #4A60B0; --folga: #B3361F; --perigo: #B3361F;
+  --acento: #9A5F12; --azul: #4A60B0; --folga: #B3361F; --perigo: #B3361F; --parede: #2B3150;
   --veu: rgba(27, 30, 43, .42); --sombra: 0 10px 30px rgba(27, 30, 43, .16);
 }
 
@@ -101,6 +101,20 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 #ver button::before, .pills button::before { content: ''; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; transition: background var(--motion-fast), transform var(--motion-base) var(--ease-spring); }
 #ver button[aria-pressed='true'], .pills button[aria-pressed='true'] { border-color: var(--acento); color: var(--acento); }
 #ver button[aria-pressed='true']::before, .pills button[aria-pressed='true']::before { background: currentColor; transform: scale(1.15); }
+#ver .trava::before { display: none; }
+#ver .trava .ic { width: 15px; height: 15px; }
+#ver .trava[aria-pressed='true'] { background: color-mix(in srgb, var(--acento) 14%, var(--bg2)); }
+.cadeado[aria-pressed='true'] { color: var(--acento); background: color-mix(in srgb, var(--acento) 12%, transparent); }
+#palco.travado #tela { cursor: grab; }
+.aberturas { display: grid; gap: 8px; }
+.aberturas:empty::before { content: 'Nenhuma ainda. Use os botões abaixo.'; font-size: 12.5px; color: var(--fg3); }
+.abertura { display: grid; gap: 8px; border: 1px solid var(--linha); border-radius: 12px; padding: 8px; animation: subir var(--motion-base) var(--ease-decelerate); }
+.abertura-topo { display: flex; gap: 6px; align-items: center; }
+.abertura select { font: 14px var(--display); color: var(--fg); background: var(--bg); border: 1px solid var(--linha2); border-radius: 9px; height: 40px; padding: 0 8px; min-width: 0; flex: 1; }
+.abertura .medidas { grid-template-columns: 1fr 1fr; }
+.abertura .stepper .passo { width: 34px; }
+.par-add { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.par-add .btn { min-height: 42px; padding: 0 6px; font-size: 14px; }
 .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
 #vazio { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; padding: 0 32px; color: var(--fg3); pointer-events: none; }
@@ -159,6 +173,20 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 .miolo { height: 40px; display: grid; place-items: center; padding: 0 8px; border: 1.5px solid var(--azul); border-radius: 8px; color: var(--azul);
   background: color-mix(in srgb, var(--azul) 10%, transparent); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* editor de paredes do cômodo: os quatro lados são botões */
+.paredes-editor { display: flex; gap: 14px; align-items: center; }
+.paredes-lado { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.paredes-resumo { font-size: 13px; color: var(--fg2); }
+.dica-rot { text-transform: none; letter-spacing: 0; font: 400 11px var(--display); color: var(--fg3); margin-left: 4px; }
+.lados { position: relative; width: 120px; height: 92px; flex: none; }
+.lados button { position: absolute; padding: 0; min-height: 0; border-radius: 5px; border: 1.5px dashed var(--fg3); background: transparent; }
+.lados button[data-lado='c'] { top: 0; left: 22px; right: 22px; height: 20px; }
+.lados button[data-lado='b'] { bottom: 0; left: 22px; right: 22px; height: 20px; }
+.lados button[data-lado='e'] { left: 0; top: 22px; bottom: 22px; width: 20px; }
+.lados button[data-lado='d'] { right: 0; top: 22px; bottom: 22px; width: 20px; }
+.lados button[aria-pressed='true'] { background: var(--parede); border: 1.5px solid var(--parede); }
+.lados button:active:not(:disabled) { transform: scale(.9); }
+.lados-miolo { position: absolute; inset: 24px; border-radius: 4px; background: color-mix(in srgb, var(--fg3) 12%, transparent); pointer-events: none; }
 .seg { display: flex; }
 .seg button { flex: 1; min-height: 40px; border-radius: 0; margin-left: -1px; font-size: 14px; color: var(--fg2); padding: 0 6px; }
 .seg button:first-child { border-radius: 10px 0 0 10px; margin-left: 0; }
