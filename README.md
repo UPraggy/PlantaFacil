@@ -26,6 +26,17 @@ Site para desenhar plantas no celular ou no computador. Você cria andares, côm
   - Para importar, também dá para arrastar o arquivo para a página.
 - **Desfazer e refazer**, tema claro e escuro, e atalhos de teclado: `N` novo, `Del` excluir, `Ctrl+Z`/`Ctrl+Y`, `Ctrl+D` duplicar, setas para mover, `+`/`−` para zoom.
 
+## Documentação
+
+| Doc | Para quem |
+|---|---|
+| [`docs/01-USO.md`](docs/01-USO.md) | Quem usa o app: passo a passo, gestos, medidas, compartilhar |
+| [`docs/02-ARQUITETURA.md`](docs/02-ARQUITETURA.md) | Quem mexe no código: modelo de dados, desenho, folgas e cotas, gestos, animação, exportação |
+| [`docs/03-PUBLICACAO.md`](docs/03-PUBLICACAO.md) | Publicar: `gh-pages`, domínio, Cloudflare, problemas conhecidos |
+| [`docs/04-DECISOES.md`](docs/04-DECISOES.md) | O que foi pedido e por quê, incluindo o cooktop que deu origem ao app |
+| [`docs/PROGRESSO.md`](docs/PROGRESSO.md) | Estado atual, histórico, armadilhas e pendências |
+| [`CLAUDE.md`](CLAUDE.md) | Regras para agentes de IA neste repositório |
+
 ## Rodar no computador
 
 ```bash
