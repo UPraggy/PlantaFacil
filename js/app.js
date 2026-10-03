@@ -80,7 +80,30 @@
   const itemPorId = id => andar.itens.find(i => i.id === id);
   const itemSel = () => (selId ? itemPorId(selId) : null);
   const totalItens = p => p.andares.reduce((n, a) => n + a.itens.length, 0);
-  const corDe = c => DES.CORES[c][tema.nome][1];
+  const corDe = c => DES.parCor(c, tema.nome)[1];
+  const NOME_COR = { azul: 'Azul', ambar: 'Âmbar', verde: 'Verde', terra: 'Terracota', roxo: 'Roxo', cinza: 'Cinza', amarelo: 'Amarelo', laranja: 'Laranja', rosa: 'Rosa', ciano: 'Água', marrom: 'Marrom', grafite: 'Grafite' };
+  // Emojis prontos para marcar o que é cada item (qualquer outro pode ser digitado no campo).
+  const EMOJIS = ['🛏️', '🛋️', '🪑', '🚪', '🪟', '🚿', '🛁', '🚽', '🧺', '🧼', '🍳', '🔥', '🧊', '🍽️', '☕', '🍷', '📺', '💻', '🖥️', '🎮',
+    '📚', '🗄️', '👕', '👟', '🧸', '👶', '🪴', '🌿', '💡', '🔌', '🧹', '🗑️', '🚗', '🚲', '🐶', '🐱', '🎹', '🏋️', '📦', '🧰', '🪞', '🖼️', '⭐', '❤️'];
+
+  // Seletor de cor: as prontas + uma livre (arco-íris, abre o seletor do sistema). aoEscolher(cor, final):
+  // final = false enquanto arrasta no seletor do sistema (não entra no desfazer), true ao soltar.
+  function seletorCor(aoEscolher) {
+    const botoes = D.CORES.map(c => h('button', { type: 'button', class: 'cor', 'data-cor': c, 'aria-label': 'Cor ' + NOME_COR[c], title: NOME_COR[c], onclick: () => aoEscolher(c, true) }));
+    const input = h('input', { type: 'color', 'aria-label': 'Escolher outra cor', title: 'Outra cor' });
+    input.addEventListener('input', () => aoEscolher(input.value.toUpperCase(), false));
+    input.addEventListener('change', () => aoEscolher(input.value.toUpperCase(), true));
+    const livre = h('label', { class: 'cor livre', title: 'Outra cor' }, input);
+    return {
+      el: h('div', { class: 'cores', role: 'group', 'aria-label': 'Cor' }, botoes, livre),
+      marcar: atual => {
+        botoes.forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.cor === atual)); b.style.setProperty('--c', corDe(b.dataset.cor)); });
+        const hex = DES.ehHex(atual);
+        livre.classList.toggle('ativa', hex);
+        if (hex) { input.value = atual.toLowerCase(); livre.style.setProperty('--c', atual); } else livre.style.removeProperty('--c');
+      },
+    };
+  }
   const nomeDe = i => i.nome || D.ROTULO[i.tipo];
 
   function aviso(msg, acao) {
@@ -330,6 +353,7 @@
     for (const g of guias) {
       s += `<path d="M${g.x1} ${g.y1}L${g.x2} ${g.y2}" stroke="${tema.acento}" stroke-width="${1 / z}" stroke-dasharray="${4 / z} ${3 / z}" fill="none"/>`;
     }
+    if (escolhendo) s += marcasEscolha(z);
     const sel = itemSel();
     palco.classList.toggle('travado', !!proj.config.travado);
     if (sel && !travado(sel)) {
@@ -465,6 +489,7 @@
     if (ptrs.size > 2) return;
     const v = andar.vista;
     imaAntes = false;
+    if (escolhendo) { gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false, escolha: true }; return; }
     if (e.button === 1 || modo === 'vista') { gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false }; return; }
     const q = plano(p.x, p.y);
     if (modo === 'comodo') {
@@ -605,7 +630,13 @@
         if (prox && prox !== selId) selecionar(prox);
       }, 330);
     }
-    if (toque && modo !== 'editar') {
+    if (toque && g.escolha) {
+      tCiclo = setTimeout(() => {
+        const q = plano(p.x, p.y), alvo = itemEm(q.x, q.y) || comodoEm(q.x, q.y);
+        if (alvo) escolherItem(alvo);
+      }, 330);
+    }
+    if (toque && !g.escolha && modo !== 'editar') {
       tCiclo = setTimeout(() => {
         const q = plano(p.x, p.y), i = itemEm(q.x, q.y);
         if (modo === 'vista' && i) dicaModo('Para mexer, escolha “Editar” ou “Mover cômodo” no alto.');
@@ -661,6 +692,58 @@
     clearTimeout(tVista);
     tVista = setTimeout(salvar, 500);
   }, { passive: false });
+
+  // ---------- escolher o que vai na exportação (tocando na planta) ----------
+  // Com "Escolher item por item" ligado no menu Exportar, cada item diz como vai na folha (item.exp):
+  // '' desenho com a medida, 'cotas' com as medidas detalhadas, 'fora' não vai.
+  let escolhendo = false;
+  const ESCOLHAS = [
+    ['', 'Desenho e medida', 'como na planta, com a medida escrita em cima'],
+    ['cotas', 'Com as medidas detalhadas', 'folga · medida · folga em volta dele'],
+    ['fora', 'Fica de fora', 'não aparece no arquivo'],
+  ];
+  function entrarEscolha() {
+    fecharModal();
+    selecionar(null);
+    escolhendo = true;
+    palco.classList.add('escolhendo');
+    $('barraEscolha').hidden = false;
+    agendar();
+  }
+  function sairEscolha(reabrir) {
+    escolhendo = false;
+    palco.classList.remove('escolhendo');
+    $('barraEscolha').hidden = true;
+    agendar();
+    if (reabrir) menuExportar();
+  }
+  $('btnEscolhaPronto').addEventListener('click', () => sairEscolha(true));
+  function escolherItem(i) {
+    abrirModal(`“${nomeDe(i)}” no arquivo`, h('div', { class: 'opcoes-arq', role: 'radiogroup', 'aria-label': 'Como vai no arquivo' }, ESCOLHAS.map(([v, titulo, desc]) =>
+      h('button', { type: 'button', role: 'radio', class: 'btn alterna opcao', 'aria-checked': String((i.exp || '') === v), 'aria-pressed': String((i.exp || '') === v),
+        onclick: () => { i.exp = v; vibrar(8); commit(); fecharModal(); agendar(); } },
+      h('span', {}, h('strong', {}, titulo), h('small', {}, desc))))));
+  }
+  // Selos na planta durante a escolha: ✓ vai com a medida, ↔ com as cotas, ✕ fora (e o item fica apagado).
+  function marcasEscolha(z) {
+    let s = '';
+    const r = 10 / z, w = r3 => Math.round(r3 * 1000) / 1000;
+    for (const i of andar.itens) {
+      const b = DES.limites(i), e = i.exp || '';
+      if (e === 'fora') {
+        s += i.tipo === 'comodo'
+          ? `<rect x="${w(b.x)}" y="${w(b.y)}" width="${w(b.w)}" height="${w(b.h)}" fill="none" stroke="${tema.folga}" stroke-width="${w(2 / z)}" stroke-dasharray="${w(6 / z)} ${w(4 / z)}"/>`
+          : `<rect x="${w(b.x)}" y="${w(b.y)}" width="${w(b.w)}" height="${w(b.h)}" fill="${tema.fundo}" fill-opacity=".7"/>`;
+      }
+      const x = b.x + b.w - r - 3 / z, y = b.y + r + 3 / z, k = r * 0.42;
+      const cor = e === 'fora' ? tema.folga : e === 'cotas' ? tema.acento : tema.cota;
+      const d = e === 'fora' ? `M${w(x - k)} ${w(y - k)}L${w(x + k)} ${w(y + k)}M${w(x + k)} ${w(y - k)}L${w(x - k)} ${w(y + k)}`
+        : e === 'cotas' ? `M${w(x - k * 1.2)} ${w(y)}H${w(x + k * 1.2)}M${w(x - k * 1.2)} ${w(y - k * .8)}V${w(y + k * .8)}M${w(x + k * 1.2)} ${w(y - k * .8)}V${w(y + k * .8)}`
+          : `M${w(x - k)} ${w(y)}L${w(x - k * .25)} ${w(y + k * .8)}L${w(x + k)} ${w(y - k * .8)}`;
+      s += `<circle cx="${w(x)}" cy="${w(y)}" r="${w(r)}" fill="${cor}"/><path d="${d}" fill="none" stroke="${tema.fundo}" stroke-width="${w(2 / z)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    return s;
+  }
 
   // ---------- modos: Editar · Mover cômodo · Mover planta ----------
   const AVISO_MODO = {
@@ -749,10 +832,10 @@
     const giro = i.tipo === 'comodo' ? 'Girar o cômodo 90° com tudo que está dentro (R)' : 'Girar 90° (R)';
     $('pGirar').title = giro; $('pGirar').setAttribute('aria-label', giro);
     $('pCoresBloco').hidden = parede;
-    document.querySelectorAll('#pCores button').forEach(b => {
-      b.setAttribute('aria-pressed', String(b.dataset.cor === i.cor));
-      b.style.setProperty('--c', corDe(b.dataset.cor));
-    });
+    selCorPainel.marcar(i.cor);
+    $('pEmojiBloco').hidden = parede;
+    set($('pEmoji'), i.emoji || '');
+    document.querySelectorAll('#pEmojis button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.emoji === i.emoji)));
     document.querySelectorAll('#pTexturas button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.textura === (i.textura || 'liso'))));
     $('pIconesBloco').hidden = i.tipo !== 'item';
     document.querySelectorAll('#pIcones button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.simbolo === (i.simbolo || ''))));
@@ -833,10 +916,25 @@
     vibrar(6); commit(); atualizarPainel(); agendar();
   });
   $('pLados').append(edLados.el);
-  D.CORES.forEach(c => $('pCores').append(h('button', {
-    type: 'button', class: 'cor', 'data-cor': c, 'aria-label': 'Cor ' + c,
-    onclick: () => { const i = itemSel(); if (!i) return; i.cor = c; commit(); atualizarPainel(); agendar(); },
-  })));
+  const selCorPainel = seletorCor((c, final) => {
+    const i = itemSel(); if (!i) return;
+    i.cor = c;
+    if (final) commit(); else mudou();
+    atualizarPainel(); agendar();
+  });
+  $('pCores').append(selCorPainel.el);
+  const definirEmoji = (v, final) => {
+    const i = itemSel(); if (!i) return;
+    i.emoji = D.limparEmoji(v);
+    if (final) { commit(); atualizarPainel(); } else mudou();
+    agendar();
+  };
+  EMOJIS.forEach(e => $('pEmojis').append(h('button', { type: 'button', class: 'emoji-btn', 'data-emoji': e, 'aria-label': 'Emoji ' + e,
+    onclick: () => { vibrar(6); definirEmoji(itemSel() && itemSel().emoji === e ? '' : e, true); } }, e)));
+  $('pEmoji').addEventListener('input', () => definirEmoji($('pEmoji').value, false));
+  $('pEmoji').addEventListener('change', () => definirEmoji($('pEmoji').value, true));
+  $('pEmoji').addEventListener('keydown', e => { if (e.key === 'Enter') $('pEmoji').blur(); });
+  $('pEmojiTirar').addEventListener('click', () => definirEmoji('', true));
   const NOMES_TEXTURA = { liso: 'Liso', rachura: 'Rachura', cruzada: 'Rachura cruzada', pontos: 'Pontilhado', linhas: 'Linhas', tijolo: 'Tijolo' };
   D.TEXTURAS.forEach(t => {
     const b = h('button', {
@@ -848,7 +946,7 @@
   });
   ['', ...DES.SIMBOLOS].forEach(s => {
     const b = h('button', {
-      type: 'button', class: 'amostra-btn', 'data-simbolo': s, 'aria-label': s ? 'Ícone: ' + s : 'Sem ícone', title: s || 'Sem ícone',
+      type: 'button', class: 'amostra-btn', 'data-simbolo': s, 'aria-label': s ? 'Ícone: ' + DES.NOMES_SIMBOLO[s] : 'Sem ícone', title: s ? DES.NOMES_SIMBOLO[s] : 'Sem ícone',
       onclick: () => { const i = itemSel(); if (!i) return; i.simbolo = s; commit(); atualizarPainel(); agendar(); },
     });
     if (s) b.innerHTML = DES.iconeSimbolo(s); else b.append(icone('x'));
@@ -1049,13 +1147,10 @@
     const segTipo = h('div', { class: 'seg grande', role: 'group', 'aria-label': 'O que adicionar' });
     const nome = h('input', { type: 'text', maxlength: 60, autocomplete: 'off', 'aria-label': 'Nome' });
     const cw = campoMedida('Largura', 0), ch = campoMedida('Profundidade', 0);
-    const cores = h('div', { class: 'cores' });
     let cor = 'azul';
-    D.CORES.forEach(c => cores.append(h('button', {
-      type: 'button', class: 'cor', 'data-cor': c, 'aria-label': 'Cor ' + c, style: `--c:${corDe(c)}`,
-      onclick: () => { cor = c; marcarCor(); },
-    })));
-    const marcarCor = () => cores.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cor === cor)));
+    const selCor = seletorCor(c => { cor = c; marcarCor(); });
+    const cores = selCor.el;
+    const marcarCor = () => selCor.marcar(cor);
     let esp = 15, ladosNovo = D.LADOS;
     const paredes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Espessura das paredes' });
     D.ESPESSURAS.forEach(v => paredes.append(h('button', {
@@ -1266,6 +1361,17 @@
     // prévia da folha (a mesma do PNG), refeita a cada opção ligada ou desligada
     const imgPrevia = h('img', { alt: `Prévia da folha do andar “${andar.nome}”` });
     const previa = h('div', { class: 'previa' }, imgPrevia);
+    const fora = andar.itens.filter(i => i.exp === 'fora').length, comCotas = andar.itens.filter(i => i.exp === 'cotas').length;
+    const escolha = h('div', { class: 'opcoes-arq' },
+      h('button', { type: 'button', class: 'btn alterna opcao', 'aria-pressed': String(!!proj.config.expEscolha), onclick: () => {
+        proj.config.expEscolha = !proj.config.expEscolha;
+        mudou();
+        if (proj.config.expEscolha) entrarEscolha(); else menuExportar();
+      } }, h('span', {}, h('strong', {}, 'Escolher item por item'),
+        h('small', {}, proj.config.expEscolha
+          ? `neste andar: ${plural(fora, 'fora', 'fora')} · ${plural(comCotas, 'com medidas detalhadas', 'com medidas detalhadas')} · o resto com a medida`
+          : 'ligue e toque na planta em cada cômodo ou móvel: fica de fora, vai com a medida ou com as medidas detalhadas'))),
+      proj.config.expEscolha ? h('button', { type: 'button', class: 'btn', onclick: entrarEscolha }, icone('edit'), 'Mudar a escolha na planta') : null);
     const atualizarPrevia = () => {
       try { imgPrevia.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(EX.folhaPNG(proj, andar, selId).svg); } catch (e) { previa.hidden = true; }
     };
@@ -1276,7 +1382,7 @@
       h('div', { class: 'linha-export destaque' },
         h('div', {}, h('strong', {}, 'Link para compartilhar'), h('small', {}, 'Quem abrir recebe uma cópia do projeto. Nada vai para servidor.')),
         h('div', { class: 'par' }, enviar, copiar)),
-      h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'O que vai nos arquivos'), previa, opcoesArquivo(atualizarPrevia)),
+      h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'O que vai nos arquivos'), previa, escolha, opcoesArquivo(atualizarPrevia)),
       linha('png', 'Imagem (PNG)', `O andar “${andar.nome}”, como na prévia`),
       linha('pdf', 'PDF', proj.config.lista ? `A4: a planta de cada andar e a lista de medidas dele` : `${plural(proj.andares.length, 'página', 'páginas')} · uma por andar, em A4`),
       linha('json', 'Arquivo do projeto', 'Para guardar e importar depois (.json)'),
@@ -1401,6 +1507,7 @@
 
   document.addEventListener('keydown', e => {
     if (!$('camada').hidden) { if (e.key === 'Escape') fecharModal(); return; }
+    if (escolhendo) { if (e.key === 'Escape' || e.key === 'Enter') sairEscolha(true); return; }
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea') return;
     const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();

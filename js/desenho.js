@@ -33,7 +33,27 @@
     terra: { claro: ['#FAE8E3', '#C5402A', '#7A2412'], escuro: ['#3B1D16', '#E0735A', '#F5C4B3'] },
     roxo:  { claro: ['#EEEAFB', '#6652C7', '#3A2C85'], escuro: ['#2C2447', '#B3A4F0', '#E1DAFB'] },
     cinza: { claro: ['#EEEDE8', '#6B6F80', '#3A3D4A'], escuro: ['#262A38', '#8E93A8', '#D4D7E3'] },
+    amarelo: { claro: ['#FBF5D0', '#A88A0C', '#5E4C05'], escuro: ['#36300E', '#E5CB4A', '#F4E8A8'] },
+    laranja: { claro: ['#FDE9D8', '#D06A1E', '#7A3A0B'], escuro: ['#3D2414', '#F29A55', '#F8D0AE'] },
+    rosa:    { claro: ['#FBE6EF', '#C2457A', '#74203F'], escuro: ['#3D1C2A', '#EE8CB5', '#F8CFE0'] },
+    ciano:   { claro: ['#DFF3F3', '#2B8A8C', '#13494A'], escuro: ['#15302F', '#6CC9C9', '#BFE9E8'] },
+    marrom:  { claro: ['#F1E8DF', '#8A5A36', '#4C2F18'], escuro: ['#2F241B', '#C49A74', '#E8D5C2'] },
+    grafite: { claro: ['#E4E5E9', '#3A3D4A', '#1B1E2B'], escuro: ['#1E2029', '#C4C7D3', '#EDEEF2'] },
   };
+  // Cor livre do seletor (#rrggbb): o preenchimento é a cor clareada (ou escurecida no tema escuro) e o contorno,
+  // a cor ajustada para dar contraste. Devolve [preenchimento, contorno, texto], como CORES.
+  const ehHex = c => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+  const misturar = (a, b, k) => '#' + [0, 2, 4].map(n => {
+    const x = parseInt(a.substr(1 + n, 2), 16), y = parseInt(b.substr(1 + n, 2), 16);
+    return Math.round(x + (y - x) * k).toString(16).padStart(2, '0');
+  }).join('').toUpperCase();
+  const luz = c => { const v = [0, 2, 4].map(n => parseInt(c.substr(1 + n, 2), 16) / 255); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  function parCor(cor, tema) {
+    if (CORES[cor]) return CORES[cor][tema];
+    if (!ehHex(cor)) return CORES.azul[tema];
+    if (tema === 'escuro') return [misturar(cor, '#11131C', 0.7), misturar(cor, '#FFFFFF', luz(cor) < 0.35 ? 0.45 : 0.15), misturar(cor, '#FFFFFF', 0.75)];
+    return [misturar(cor, '#FFFFFF', 0.84), misturar(cor, '#000000', luz(cor) > 0.6 ? 0.45 : 0.1), misturar(cor, '#000000', 0.6)];
+  }
 
   const ORDEM = ['comodo', 'parede', 'item'];
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -106,6 +126,46 @@
     armario: { dim: [200, 60], f: (w, h) => divisorias(w, h, Math.max(2, Math.round(w / 50)), 0) + P(`M0 ${r3(.12 * h)}H${r3(w)}`) },
     estante: { dim: [80, 30], f: (w, h) => divisorias(w, h, Math.max(2, Math.round(w / 40)), 0) },
     rack: { dim: [150, 40], f: (w, h) => R(.25 * w, .22 * h, .5 * w, .16 * h, 1) + P(`M${r3(.1 * w)} ${r3(.72 * h)}H${r3(.9 * w)}`) },
+    tv: { dim: [120, 30], f: (w, h) => P(`M0 ${r3(.35 * h)}H${r3(w)}`) + R(.38 * w, .55 * h, .24 * w, .3 * h, 1) },
+    chuveiro: { dim: [90, 90], f: (w, h) => { const m = Math.min(w, h); return C(.5 * w, .5 * h, m * .05) + C(.82 * w, .18 * h, m * .09) + P(`M${r3(.82 * w)} ${r3(.18 * h)}L${r3(.6 * w)} ${r3(.4 * h)}`); } },
+    banheira: { dim: [170, 75], f: (w, h) => { const m = Math.min(w, h); return R(.05 * w, .1 * h, .9 * w, .8 * h, m * .3) + C(.15 * w, .5 * h, m * .05); } },
+    lavatorio: { dim: [60, 45], f: (w, h) => `<ellipse cx="${r3(.5 * w)}" cy="${r3(.58 * h)}" rx="${r3(.33 * w)}" ry="${r3(.3 * h)}"/>` + C(.5 * w, .16 * h, Math.min(w, h) * .05) },
+    lavadora: { dim: [60, 60], f: (w, h) => { const m = Math.min(w, h); return P(`M0 ${r3(.18 * h)}H${r3(w)}`) + C(.5 * w, .58 * h, m * .3) + C(.5 * w, .58 * h, m * .17); } },
+    mesaRedonda: { dim: [100, 100], f: (w, h) => `<ellipse cx="${r3(.5 * w)}" cy="${r3(.5 * h)}" rx="${r3(.42 * w)}" ry="${r3(.42 * h)}"/>` },
+    escrivaninha: { dim: [120, 60], f: (w, h) => R(.3 * w, .14 * h, .4 * w, .14 * h, 1) + P(`M0 ${r3(.82 * h)}H${r3(w)}`) },
+    criado: { dim: [45, 40], f: (w, h) => { const m = Math.min(w, h); return P(`M${r3(.1 * w)} ${r3(.5 * h)}H${r3(.9 * w)}`) + C(.5 * w, .28 * h, m * .06) + C(.5 * w, .74 * h, m * .06); } },
+    planta: { dim: [45, 45], f: (w, h) => {
+      const cx = .5 * w, cy = .5 * h;
+      let d = '';
+      for (const [x, y] of [[.5, .12], [.86, .38], [.72, .84], [.28, .84], [.14, .38]]) d += `M${r3(cx)} ${r3(cy)}L${r3(x * w)} ${r3(y * h)}`;
+      return C(cx, cy, Math.min(w, h) * .42) + P(d);
+    } },
+    tapete: { dim: [200, 140], f: (w, h) => {
+      let d = '';
+      const n = Math.max(3, Math.round(h / 25));
+      for (let k = 1; k < n; k++) { const y = r3(h * k / n); d += `M0 ${y}H${r3(.05 * w)}M${r3(.95 * w)} ${y}H${r3(w)}`; }
+      return R(.05 * w, .06 * h, .9 * w, .88 * h, 0) + P(d);
+    } },
+    escada: { dim: [100, 250], f: (w, h) => {
+      const n = Math.max(4, Math.round(h / 28));
+      let d = '';
+      for (let k = 1; k < n; k++) d += `M0 ${r3(h * k / n)}H${r3(w)}`;
+      d += `M${r3(.5 * w)} ${r3(.92 * h)}V${r3(.08 * h)}M${r3(.38 * w)} ${r3(.08 * h + .12 * w)}L${r3(.5 * w)} ${r3(.08 * h)}L${r3(.62 * w)} ${r3(.08 * h + .12 * w)}`;
+      return P(d);
+    } },
+    berco: { dim: [70, 130], f: (w, h) => {
+      let d = '';
+      const n = Math.max(4, Math.round(w / 12));
+      for (let k = 1; k < n; k++) { const x = r3(w * k / n); d += `M${x} 0V${r3(.08 * h)}M${x} ${r3(.92 * h)}V${r3(h)}`; }
+      return R(.06 * w, .08 * h, .88 * w, .84 * h, Math.min(w, h) * .05) + P(d);
+    } },
+  };
+  const NOMES_SIMBOLO = {
+    cooktop: 'Cooktop', geladeira: 'Geladeira', pia: 'Pia', sofa: 'Sofá', poltrona: 'Poltrona', cama: 'Cama', mesa: 'Mesa',
+    cadeira: 'Cadeira', vaso: 'Vaso sanitário', box: 'Box', porta: 'Porta', janela: 'Janela', armario: 'Armário', estante: 'Estante',
+    rack: 'Rack', tv: 'TV', chuveiro: 'Chuveiro', banheira: 'Banheira', lavatorio: 'Lavatório', lavadora: 'Máquina de lavar',
+    mesaRedonda: 'Mesa redonda', escrivaninha: 'Escrivaninha', criado: 'Criado-mudo', planta: 'Planta', tapete: 'Tapete',
+    escada: 'Escada', berco: 'Berço',
   };
 
   function simboloSVG(nome, w, h, cor, sw, op) {
@@ -397,7 +457,7 @@
     const pw = i.w * z, ph = i.h * z;
     let fill, stroke, tc;
     if (i.tipo === 'parede') { fill = t.parede; stroke = t.paredeBorda; tc = t.texto; }
-    else { [fill, stroke, tc] = (CORES[i.cor] || CORES.azul)[t.nome]; }
+    else { [fill, stroke, tc] = parCor(i.cor, t.nome); }
     const geo = `x="${r3(i.x)}" y="${r3(i.y)}" width="${r3(i.w)}" height="${r3(i.h)}"`;
     const rx = i.tipo === 'parede' ? 0 : r3(2 / z);
 
@@ -425,7 +485,7 @@
       s += `<g transform="${tr}">${simboloSVG(i.simbolo, w0, h0, stroke, 1.2 / z, 0.85)}</g>`;
     }
 
-    const nome = i.nome || '';
+    const nome = rotuloNome(i);
     if (i.tipo === 'comodo') {
       const l1 = cabe(nome, pw - 14, 12);
       if (l1 && ph >= 24) s += txt(i.x + 9 / z, i.y + 17 / z, l1, { fs, fill: tc, anchor: 'start', peso: 500 });
@@ -479,6 +539,9 @@
     return envolver(i, s, o.fx ? o.fx(i.id) : null);
   }
 
+  // O nome escrito na planta: o emoji (se tiver) vem antes, para marcar o que é o item mesmo quando o nome é cortado.
+  function rotuloNome(i) { return [i.emoji, i.nome].filter(Boolean).join(' '); }
+
   function selecaoSVG(i, o, cont) {
     const { z, t } = o;
     const off = 26 / z, L = i.x, R = i.x + i.w, T = i.y, B = i.y + i.h;
@@ -488,7 +551,16 @@
       s += `<rect x="${r3(L - e)}" y="${r3(T - e)}" width="${r3(i.w + 2 * e)}" height="${r3(i.h + 2 * e)}" rx="${r3((2 + e * z) / z)}" fill="none" stroke="${t.acento}" stroke-width="${r3(2 / z)}" stroke-opacity="${r3(0.7 * (1 - o.pulso.p))}"/>`;
     }
     s += `<rect x="${r3(L)}" y="${r3(T)}" width="${r3(i.w)}" height="${r3(i.h)}" rx="${r3(2 / z)}" fill="none" stroke="${t.acento}" stroke-width="${r3(2.2 / z)}"/>`;
-    if (cont) return s + cadeiaSVG(i, cont, o);
+    return s + cotasSVG(i, o, cont, 0, 1);
+  }
+
+  // As cotas de um item, sem o realce de selecionado. k/n: posição do item entre os n do mesmo recipiente que levam
+  // cotas na folha (cada um numa linha mais para fora, para as cadeias não se cruzarem).
+  function cotasSVG(i, o, cont, k, n) {
+    if (cont) return cadeiaSVG(i, cont, o, k, n);
+    const { z, t } = o;
+    const off = 26 / z, L = i.x, R = i.x + i.w, T = i.y, B = i.y + i.h;
+    let s = '';
     const lim = limites(i), yc = lim.y - off, xc = lim.x - off; // cotas por fora das paredes, se houver
     s += guia(L, T, L, yc, t.cota, z) + guia(R, T, R, yc, t.cota, z);
     s += cota(L, yc, R, yc, fmt(i.w) + ' cm', t.cota, t.cotaTxt, z, t);
@@ -499,12 +571,13 @@
 
   // Cotas em cadeia do item S dentro do recipiente C (o desenho do cooktop):
   // à esquerda  folga · profundidade · folga, embaixo  folga · largura · folga, e os totais do recipiente.
-  function cadeiaSVG(S, C, o) {
+  function cadeiaSVG(S, C, o, k, n) {
     const { z, t } = o;
+    k = k || 0; n = n || 1;
     const L = C.x, R = C.x + C.w, T = C.y, B = C.y + C.h;
     const lim = limites(C), Lx = lim.x, Rx = lim.x + lim.w, By = lim.y + lim.h; // faces de fora das paredes
     const sl = S.x, sr = S.x + S.w, st = S.y, sb = S.y + S.h;
-    const xe = Lx - 26 / z, yb = By + 26 / z, xd = Rx + 26 / z, yt = By + 56 / z;
+    const xe = Lx - (26 + 30 * k) / z, yb = By + (26 + 30 * k) / z, xd = Rx + 26 / z, yt = By + (26 + 30 * n) / z;
     let s = '';
     s += guia(sl, st, xe, st, t.cota, z) + guia(sl, sb, xe, sb, t.cota, z);
     s += guia(sl, sb, sl, yb, t.cota, z) + guia(sr, sb, sr, yb, t.cota, z);
@@ -520,8 +593,10 @@
     };
     s += trecho(T, st, t.folga, t.folgaTxt, true, 0) + trecho(st, sb, t.cota, t.cotaTxt, true, 1) + trecho(sb, B, t.folga, t.folgaTxt, true, 2);
     s += trecho(L, sl, t.folga, t.folgaTxt, false, 0) + trecho(sl, sr, t.cota, t.cotaTxt, false, 1) + trecho(sr, R, t.folga, t.folgaTxt, false, 2);
-    s += cota(xd, T, xd, B, fmt(C.h) + ' cm', t.total, t.totalTxt, z, t, 'd');
-    s += cota(L, yt, R, yt, fmt(C.w) + ' cm', t.total, t.totalTxt, z, t, 'b');
+    if (k === 0) { // os totais do recipiente, uma vez só
+      s += cota(xd, T, xd, B, fmt(C.h) + ' cm', t.total, t.totalTxt, z, t, 'd');
+      s += cota(L, yt, R, yt, fmt(C.w) + ' cm', t.total, t.totalTxt, z, t, 'b');
+    }
     return s;
   }
 
@@ -543,7 +618,7 @@
     for (const i of itens) {
       if (i.tipo !== 'item' || i.w * z < 30) continue;
       const cx = i.x + i.w / 2, cy = i.y + i.h / 2;
-      const w = Math.min(i.w, Math.max((i.nome || '').length * fs * 0.56, 9 * 11 / z * 0.6)), h = Math.min(i.h, fs * 2.7);
+      const w = Math.min(i.w, Math.max(rotuloNome(i).length * fs * 0.56, 9 * 11 / z * 0.6)), h = Math.min(i.h, fs * 2.7);
       caixas.push({ x: cx - w / 2, y: cy - h / 2 - fs * 0.3, w, h });
       if (o.forcarRotulos) caixas.push({ x: cx - Math.max(w, i.w) / 2, y: i.y + i.h, w: Math.max(w, i.w), h: fs * 1.4 }); // nome/medida que foram para baixo
     }
@@ -592,6 +667,17 @@
     const cont = sel ? recipiente(sel, itens) : null;
     // Com recipiente, as folgas até as bordas dele já aparecem na cadeia; aqui ficam só as entre vizinhos.
     if (sel) juntar(folgasDe(sel, itens).filter(f => !(cont && f.dentro)));
+    // Folha: itens escolhidos para levar as cotas detalhadas (cotasIds), agrupados por recipiente.
+    const grupos = new Map();
+    for (const id of o.cotasIds || []) {
+      const c = itens.find(i => i.id === id);
+      if (!c || c === sel) continue;
+      const ct = recipiente(c, itens);
+      juntar(folgasDe(c, itens).filter(f => !(ct && f.dentro)));
+      const chave = ct ? ct.id : '#' + c.id;
+      if (!grupos.has(chave)) grupos.set(chave, { ct, lista: [] });
+      grupos.get(chave).lista.push(c);
+    }
     const ocupadas = caixasDosNomes(itens, o);
     for (const f of linhas.values()) {
       s += f.h
@@ -603,6 +689,7 @@
     if (o.total) s += totalSVG(itens, o);
     const sobre = o.hoverId && o.hoverId !== o.selId ? itens.find(i => i.id === o.hoverId) : null;
     if (sobre) s += `<rect x="${r3(sobre.x)}" y="${r3(sobre.y)}" width="${r3(sobre.w)}" height="${r3(sobre.h)}" rx="${r3(2 / z)}" fill="none" stroke="${t.cota}" stroke-width="${r3(1.6 / z)}" stroke-opacity=".85"/>`;
+    for (const { ct, lista } of grupos.values()) lista.forEach((c, k) => { s += cotasSVG(c, o, ct, k, lista.length); });
     if (sel) s += selecaoSVG(sel, o, cont);
     return (defs.size ? `<defs>${[...defs.values()].join('')}</defs>` : '') + s;
   }
@@ -632,7 +719,7 @@
 
   PF.desenho = {
     TEMAS, TEMA_EXPORT, CORES, FONTE, MONO,
-    SIMBOLOS: Object.keys(SIMBOLOS),
-    fmt, esc, caixa, limites, ladosDe, aberturasNoLado, recipiente, dentroDoComodo, girar, folgasDe, conteudo, grade, iconeSimbolo, iconeTextura,
+    SIMBOLOS: Object.keys(SIMBOLOS), NOMES_SIMBOLO,
+    parCor, ehHex, rotuloNome, fmt, esc, caixa, limites, ladosDe, aberturasNoLado, recipiente, dentroDoComodo, girar, folgasDe, conteudo, grade, iconeSimbolo, iconeTextura,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

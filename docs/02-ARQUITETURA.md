@@ -75,6 +75,10 @@ config.travado = boolean (trava a planta inteira)
 
 ## Desenho (`js/desenho.js`)
 
+- **Cores:** `CORES` tem 12 prontas (`[preenchimento, contorno, texto]` por tema). `item.cor` também aceita `#RRGGBB` (cor livre do seletor): `parCor(cor, tema)` clareia ou escurece para o preenchimento e ajusta o contorno pelo brilho. Use sempre `parCor`, nunca `CORES[cor]` direto.
+- **Emoji:** `item.emoji` (até 8 caracteres, `D.limparEmoji`) vai antes do nome em tudo que escreve o nome (`rotuloNome`, lista do PDF).
+- **Ícones:** 27 em `SIMBOLOS` (mesma lista em `dados.js`, testado), nomes de tela em `NOMES_SIMBOLO`.
+
 Uma única função monta a planta para a **tela e a exportação**:
 
 ```js
@@ -183,6 +187,7 @@ Os efeitos de JS entram em `renderizar`, que segue pedindo quadros enquanto houv
 ## Exportação (`js/exportar.js`)
 
 - **O que vai na folha** (`config`): `expMedidas` (ligado), `expCotas` (cotas em cadeia do selecionado), `expFolgas`, `expTotal` e `lista` (página do PDF). Desde 03/10 o padrão é limpo: só `expMedidas` e `lista`. `gerar()` zera o `selId` sem `expCotas`; `respiroDe(A, comSel, comTotal)` só reserva espaço para o que vai na folha, e a legenda só lista os tipos de linha presentes. Projeto sem `config.expV >= 2` (de antes) volta uma vez para o padrão limpo em `limparProjeto`.
+- **Escolher item por item** (`config.expEscolha` + `item.exp` = `''` | `'cotas'` | `'fora'`): `EX.paraFolha(proj, andar, selId)` devolve o andar sem os "fora", os `cotasIds` (marcados "cotas" + o selecionado se `expCotas`) e `niveis` (maior número de cadeias no mesmo recipiente). `DES.conteudo` desenha `cotasIds` com `cotasSVG(i, o, cont, k, n)`: a k-ésima cadeia do mesmo recipiente vai 30 px mais para fora e os totais do recipiente saem uma vez, depois das n cadeias; `respiroDe` reserva esse espaço. Na tela, `entrarEscolha()` (em `app.js`) troca todo toque por `escolherItem()` (modal com as 3 opções) e `marcasEscolha()` desenha os selos ✓ ↔ ✕.
 - **Prévia:** `EX.folhaPNG(proj, andar, selId)` devolve `{ W, H, svg }` da folha do PNG; o menu Exportar mostra esse SVG num `<img>` e refaz a cada opção (`opcoesArquivo` em `app.js`).
 
 A folha é pensada para ser **lida inteira no celular, sem zoom**; a resolução alta é para quem quiser dar zoom.

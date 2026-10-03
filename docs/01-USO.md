@@ -42,6 +42,9 @@ Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no com
 | Mudar o tamanho | Arraste as bolinhas nos cantos e lados, ou use − e + em Largura e Profundidade (segurando, repete). |
 | Posicionar exato | No painel, **Distância até…**: digite quanto quer de cada lado. Ex.: 10 em cima e 8 embaixo. |
 | Girar | Botão ⟳ ao lado das medidas, ou tecla `R` (90° no sentido horário). **No cômodo, gira tudo o que está dentro junto**: os móveis, as paredes e as janelas e portas. |
+| Cor | No painel (**Ajustes**), 12 cores prontas e o **arco-íris**, que abre o seletor do aparelho para qualquer cor. |
+| Marcar o que é | **Emoji** no painel: toque num dos prontos ou digite qualquer um no campo. Ele aparece antes do nome, na planta, no PNG/PDF e na lista de medidas. |
+| Ícone (vista de cima) | **Mais opções › Ícone**: 27 desenhos (cama, sofá, pia, cooktop, chuveiro, banheira, lavatório, máquina de lavar, TV, mesa redonda, escrivaninha, criado-mudo, planta, tapete, escada, berço…). |
 | Paredes do cômodo | No painel do cômodo, **Paredes**: toque num lado para ligar ou desligar e escolha a espessura. O lado sem parede aparece tracejado. |
 | Janela, porta ou vão | No painel do cômodo, **Janelas, portas e vãos** › **+ Janela**, **+ Porta** ou **+ Vão**. Para cada uma: tipo, em qual parede, distância do canto e largura. A porta mostra o arco de abrir para dentro. |
 | Quem fica na frente | Quando um item está em cima do outro, **toque de novo no mesmo lugar** para pegar o de trás. Ou use **Mais opções › Trazer para frente / Enviar para trás**. O item selecionado dá para arrastar mesmo se outro estiver por cima. |
@@ -87,6 +90,8 @@ Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no com
 - **Distância entre os itens**: todas as folgas, em vermelho;
 - **Medida total da planta**: largura e altura de tudo, por fora;
 - **Lista de medidas**: página extra no PDF.
+
+**Escolher item por item:** ligue essa opção no mesmo menu e a planta entra no modo de escolha (faixa âmbar no alto). Toque em cada cômodo ou móvel e diga como ele vai: **Desenho e medida** (✓), **Com as medidas detalhadas** (↔, folga · medida · folga em volta dele) ou **Fica de fora** (✕, apagado na planta). Toque em **Pronto** para voltar ao menu e ver a prévia. Vários itens dentro da mesma bancada ganham cada um a sua linha de cotas, uma mais para fora que a outra, sem se cruzar. Desligando a opção, a folha volta ao normal (a marcação de cada item fica guardada para a próxima vez).
 
 Botão de compartilhar no topo (seta para cima):
 

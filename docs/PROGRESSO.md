@@ -8,8 +8,21 @@
 
 - **No ar:** https://plantafacil.rafaelmr.com.br. O endereço antigo, https://upraggy.github.io/PlantaFacil/, ainda abre direto em vez de redirecionar (veja PENDENTE 3).
 - **Repositório:** `UPraggy/PlantaFacil` (público). `main` tem o código; `gh-pages` tem o site gerado pelo deploy.
-- **Qualidade:** `npm test` = 99 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
+- **Qualidade:** `npm test` = 114 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
+
+## 03/10/2026 (4) — escolher item por item, cores livres, mais ícones e emojis
+
+Pedidos do Rafael: "quero uma opção, um botão que se eu ativar eu escolho o que vai para a exportação" (perguntei e ele escolheu "os dois": tirar da folha **e** escolher quem leva as cotas detalhadas) e, no meio do trabalho, "aumente a quantidade de cores, deixe um seletor de cores e aumente a quantidade de ícones, deixe emojis para poder marcar o que é cada item".
+
+**Feito:**
+- **Escolher item por item** (menu Exportar): ligar a opção põe a planta no modo de escolha, com faixa âmbar no alto, sem menu de modos e sem Adicionar. Cada toque abre "“Nome” no arquivo" com Desenho e medida / Com as medidas detalhadas / Fica de fora. Selos ✓ ↔ ✕ na planta, e o que fica de fora aparece apagado. "Pronto", Esc ou Enter voltam ao menu, já com a prévia. O resumo diz quantos estão fora e quantos têm cotas no andar. A marcação vai no link e no .json.
+- **Várias cadeias de cotas sem cruzar:** cada item do mesmo recipiente ganha uma linha 30 px mais para fora, e os totais saem uma vez só (`cotasSVG`, `cadeiaSVG(k, n)`, `respiroDe(..., niveis)`).
+- **Cores:** 12 prontas (novas: amarelo, laranja, rosa, água, marrom, grafite) mais a **cor livre** (arco-íris → `<input type=color>`), no painel e no formulário Adicionar. `parCor` faz os tons para o tema claro, o escuro e a folha.
+- **Ícones:** 27 (novos: TV, chuveiro, banheira, lavatório, máquina de lavar, mesa redonda, escrivaninha, criado-mudo, planta, tapete, escada, berço), em grade, com nome no toque longo e no leitor de tela.
+- **Emojis:** 44 prontos e campo para digitar qualquer um. O emoji vai antes do nome na planta, na folha e na lista do PDF. Conferi que o emoji sai colorido no PNG, que passa por canvas.
+
+**Como conferi:** `npm test` 114 ok (15 novas: escolha fora/cotas/níveis, cadeias sem cruzar, selecionado somado, cores livres nos dois temas, sanitização de cor, emoji e escolha, emoji no desenho e na lista, ícones em sincronia, link com emoji, escolha e cor livre). No preview a 375 px fiz o fluxo inteiro: liguei a escolha, toquei na geladeira, escolhi "Fica de fora" e toquei em Pronto. A prévia saiu sem geladeira e sem mesa e com as cadeias da pia e do cooktop empilhadas. Também testei a cor livre e o emoji pelo painel e vi a grade de 27 ícones. `npm run e2e` ok e `npm run amostra` sem erros.
 
 ## 03/10/2026 (3) — folha limpa por padrão, com prévia e opções
 

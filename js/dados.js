@@ -5,9 +5,13 @@
   const CHAVE = 'plantafacil:v1';
   const TIPOS = ['item', 'comodo', 'parede'];
   const ROTULO = { item: 'Item', comodo: 'Cômodo', parede: 'Parede' };
-  const CORES = ['azul', 'ambar', 'verde', 'terra', 'roxo', 'cinza'];
+  // Cores prontas; além delas, o seletor aceita qualquer cor livre no formato #rrggbb.
+  const CORES = ['azul', 'ambar', 'verde', 'terra', 'roxo', 'cinza', 'amarelo', 'laranja', 'rosa', 'ciano', 'marrom', 'grafite'];
   const TEXTURAS = ['liso', 'rachura', 'cruzada', 'pontos', 'linhas', 'tijolo'];
-  const SIMBOLOS = ['cooktop', 'geladeira', 'pia', 'sofa', 'poltrona', 'cama', 'mesa', 'cadeira', 'vaso', 'box', 'porta', 'janela', 'armario', 'estante', 'rack'];
+  const SIMBOLOS = ['cooktop', 'geladeira', 'pia', 'sofa', 'poltrona', 'cama', 'mesa', 'cadeira', 'vaso', 'box', 'porta', 'janela', 'armario', 'estante', 'rack',
+    'tv', 'chuveiro', 'banheira', 'lavatorio', 'lavadora', 'mesaRedonda', 'escrivaninha', 'criado', 'planta', 'tapete', 'escada', 'berco'];
+  // Na exportação com "Escolher item por item": '' = desenho com a medida, 'fora' = não vai, 'cotas' = com as cotas detalhadas.
+  const ESCOLHAS_EXP = ['', 'fora', 'cotas'];
   const ENCAIXES = [1, 5, 10];
   const ESPESSURAS = [0, 10, 15, 20, 25];
   const LADOS = 'cdbe'; // lados do cômodo com parede: c = cima, d = direita, b = baixo, e = esquerda
@@ -16,7 +20,7 @@
   const TIPOS_ABERTURA = ['janela', 'porta', 'vao'];
   const LARGURA_ABERTURA = { janela: 120, porta: 80, vao: 90 };
   // exp*: o que vai nos arquivos exportados (independe dos botões da tela). Por padrão, tudo.
-  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: false, expTotal: false, expCotas: false, expV: 2 };
+  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: false, expTotal: false, expCotas: false, expEscolha: false, expV: 2 };
   // Valores iniciais do formulário "Adicionar" (o usuário digita o tamanho que quiser).
   const NOVO_PADRAO = {
     item: { nome: '', w: 100, h: 60, cor: 'azul' },
@@ -29,6 +33,10 @@
   const num = (v, pad, min, max) => { v = Number(v); return Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : pad; };
   const texto = (v, pad, max) => { const s = String(v == null ? '' : v).trim().slice(0, max); return s || pad; };
   const corPadrao = tipo => (tipo === 'item' ? 'azul' : 'cinza');
+  const limparCor = (c, tipo) => (CORES.includes(c) ? c : typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c.toUpperCase() : corPadrao(tipo));
+  // Emoji para marcar o item: até 8 caracteres (um emoji composto, como 🧑‍🍳, já usa vários), sem espaços nem
+  // sinais de marcação. Vai para o SVG por esc() e para a tela por textContent.
+  const limparEmoji = v => [...String(v == null ? '' : v).replace(/[\s<>&"'`\u0000-\u001f]/g, '')].slice(0, 8).join('');
   // Normaliza os lados com parede: só c/d/b/e, sem repetir, na ordem cdbe. Sem valor = os quatro.
   const limparLados = v => (v == null ? LADOS : [...LADOS].filter(k => String(v).includes(k)).join(''));
   function limparAberturas(v, manterId) {
@@ -54,7 +62,7 @@
       y: num(i.y, 0, -1e5, 1e5),
       w: num(i.w, 100, 1, 1e5),
       h: num(i.h, 60, 1, 1e5),
-      cor: CORES.includes(i.cor) ? i.cor : corPadrao(tipo),
+      cor: limparCor(i.cor, tipo),
       textura: TEXTURAS.includes(i.textura) ? i.textura : 'liso',
       simbolo: tipo === 'item' && SIMBOLOS.includes(i.simbolo) ? i.simbolo : '',
       parede: tipo === 'comodo' ? num(i.parede, 0, 0, 100) : 0, // espessura das paredes ao redor do cômodo
@@ -62,6 +70,8 @@
       giro: GIROS.includes(Number(i.giro)) ? Number(i.giro) : 0, // para onde o ícone está virado (90° por vez)
       aberturas: tipo === 'comodo' ? limparAberturas(i.aberturas, manterId) : [], // janelas, portas e vãos nas paredes
       travado: !!i.travado, // travado: não move nem muda de tamanho arrastando
+      emoji: limparEmoji(i.emoji), // marca o que é o item (vai antes do nome)
+      exp: ESCOLHAS_EXP.includes(i.exp) ? i.exp : '', // como vai na exportação com "Escolher item por item"
     };
   }
 
@@ -95,7 +105,7 @@
         encaixe: ENCAIXES.includes(Number(c.encaixe)) ? Number(c.encaixe) : CONFIG_PADRAO.encaixe,
         ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total, travado: !!c.travado, lista: !!c.lista,
         expMedidas: !!c.expMedidas, expFolgas: !antigo && !!c.expFolgas, expTotal: !antigo && !!c.expTotal,
-        expCotas: !antigo && !!c.expCotas, expV: 2,
+        expCotas: !antigo && !!c.expCotas, expEscolha: !!c.expEscolha, expV: 2,
       },
     };
   }
@@ -135,7 +145,7 @@
     return limparItem({
       tipo, x, y, w, h,
       nome: texto(spec.nome, `${ROTULO[tipo]} ${n}`, 60),
-      cor: spec.cor, textura: 'liso', simbolo: '', parede: spec.parede, lados: spec.lados, giro: 0,
+      cor: spec.cor, textura: 'liso', simbolo: '', parede: spec.parede, lados: spec.lados, giro: 0, emoji: spec.emoji,
     }, false);
   }
 
@@ -210,7 +220,7 @@
   }
 
   PF.dados = {
-    TIPOS, ROTULO, CORES, TEXTURAS, SIMBOLOS, ENCAIXES, ESPESSURAS, LADOS, TIPOS_ABERTURA, CONFIG_PADRAO, NOVO_PADRAO, limparLados, novaAbertura,
+    TIPOS, ROTULO, CORES, TEXTURAS, SIMBOLOS, ESCOLHAS_EXP, limparEmoji, limparCor, ENCAIXES, ESPESSURAS, LADOS, TIPOS_ABERTURA, CONFIG_PADRAO, NOVO_PADRAO, limparLados, novaAbertura,
     uid, clonar, carregar, salvarAgora, agendarSalvar,
     novoProjeto, novoAndar, duplicarProjeto, duplicarAndar, novoItem,
     paraArquivo, paraBackup, paraImportar, limparProjeto,

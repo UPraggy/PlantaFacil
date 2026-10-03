@@ -153,6 +153,39 @@ const cheia = EX.folhaPNG(projX, andarX, 'Cooktop');
 ok(legDe(cheia.svg) === 'medida,folga,total' && cheia.H >= limpa.H, 'ligando cotas e total, eles entram na folha e na legenda');
 projX.config = Object.assign({}, cfgNovo);
 
+// --- escolher item por item: "fora" sai da folha, "cotas" ganha a cadeia; cadeias do mesmo recipiente empilham
+const bancE = it('item', 'Bancada', 0, 0, 200, 63), piaE = it('item', 'Pia', 20, 9, 60, 45, { exp: 'cotas' }), cookE = it('item', 'Cooktop', 110, 9, 75, 45, { exp: 'cotas' });
+const gelE = it('item', 'Geladeira', 300, 0, 70, 75, { exp: 'fora' });
+const andarE = { nome: 'Térreo', itens: [bancE, piaE, cookE, gelE] };
+const projE = D.novoProjeto('Escolha');
+const semEscolha = EX.paraFolha(projE, andarE, null);
+ok(semEscolha.andar.itens.length === 4 && semEscolha.cotasIds.length === 0, 'sem "Escolher item por item", a marcação dos itens não conta');
+projE.config.expEscolha = true;
+const fE = EX.paraFolha(projE, andarE, null);
+ok(fE.andar.itens.length === 3 && !fE.andar.itens.includes(gelE) && fE.cotasIds.join() === 'Pia,Cooktop' && fE.niveis === 2, 'escolha: geladeira fora, pia e cooktop com cotas, 2 níveis na bancada');
+const folhaE = EX.folhaPNG(projE, andarE, null).svg;
+ok(!folhaE.includes('>Geladeira<') && folhaE.includes('>Pia<'), 'folha sem o item marcado "fora"');
+const linhasE = DES.conteudo(fE.andar, { z: 1, t: DES.TEMA_EXPORT, cotasIds: fE.cotasIds, forcarRotulos: true });
+const xsVert = [...linhasE.matchAll(/<path d="M(-?[\d.]+) [\d.-]+V/g)].map(m => +m[1]).filter(x => x < 0);
+ok(new Set(xsVert).size >= 2, 'duas cadeias na mesma bancada ficam em linhas diferentes (não se cruzam)');
+projE.config.expCotas = true;
+ok(EX.paraFolha(projE, andarE, 'Bancada').cotasIds.join() === 'Pia,Cooktop,Bancada', '"Cotas do item selecionado" soma o selecionado');
+ok(EX.paraFolha(projE, andarE, 'Geladeira').cotasIds.indexOf('Geladeira') < 0, 'item fora não ganha cotas nem selecionado');
+
+// --- cores livres, emoji e ícones novos
+ok(D.SIMBOLOS.join() === DES.SIMBOLOS.join() && D.SIMBOLOS.length === 27 && D.SIMBOLOS.every(k => DES.NOMES_SIMBOLO[k]), 'ícones: listas iguais, 27, todos com nome');
+ok(D.CORES.length === 12 && D.CORES.every(c => DES.CORES[c]), '12 cores prontas, todas desenháveis');
+const livre = DES.parCor('#C03FA0', 'claro'), livreE = DES.parCor('#C03FA0', 'escuro');
+ok(livre.every(DES.ehHex) && livreE.every(DES.ehHex) && livre[0] !== livreE[0], 'cor livre vira preenchimento, contorno e texto nos dois temas');
+ok(DES.parCor('xyz', 'claro') === DES.CORES.azul.claro, 'cor inválida desenha azul');
+const limpoC = D.limparProjeto({ andares: [{ itens: [{ tipo: 'item', cor: '#a1b2c3', emoji: ' 🧑‍🍳 <x>', exp: 'cotas' }, { tipo: 'item', cor: 'red', exp: 'zzz' }] }] }, false).andares[0].itens;
+ok(limpoC[0].cor === '#A1B2C3' && limpoC[0].emoji === '🧑‍🍳x' && limpoC[0].exp === 'cotas', 'cor livre, emoji e escolha preservados (sem espaço nem marcação)');
+ok(limpoC[1].cor === 'azul' && limpoC[1].exp === '' && limpoC[1].emoji === '', 'cor e escolha inválidas viram o padrão');
+const comEmoji = DES.conteudo({ itens: [it('item', 'Sofá', 0, 0, 200, 90, { emoji: '🛋️' })] }, { z: 1, t: DES.TEMAS.claro, medidas: true });
+ok(comEmoji.includes('🛋️ Sofá'), 'emoji vai antes do nome no desenho');
+ok(EX.linhasMedidas({ itens: [it('item', 'Sofá', 0, 0, 200, 90, { emoji: '🛋️' })] })[0].nome === '🛋️ Sofá', 'emoji vai antes do nome na lista do PDF');
+
+
 // --- folgas básicas
 const solto = [it('item', 'a', 0, 0, 50, 50), it('item', 'b', 70, 0, 50, 50)];
 const gs = DES.folgasDe(solto[0], solto);
@@ -177,7 +210,7 @@ const lista = D.paraImportar(JSON.parse(JSON.stringify(D.paraArquivo(proj))));
 ok(lista.length === 1 && lista[0].id !== proj.id, 'import gera ids novos');
 ok(lista[0].andares[0].itens[0].textura === 'rachura' && lista[0].andares[0].itens[0].simbolo === 'sofa', 'textura e ícone preservados');
 ok(lista[0].andares[0].itens[1].parede === 15, 'paredes do cômodo preservadas');
-const sujo = D.paraImportar({ projeto: { andares: [{ itens: [{ tipo: 'zzz', x: 'a', w: -5, h: 1e9, cor: 'rosa', textura: 'x', simbolo: 'y', parede: 999 }, null, 5] }] } });
+const sujo = D.paraImportar({ projeto: { andares: [{ itens: [{ tipo: 'zzz', x: 'a', w: -5, h: 1e9, cor: 'rosa-neon', textura: 'x', simbolo: 'y', parede: 999 }, null, 5] }] } });
 const i0 = sujo[0].andares[0].itens;
 ok(i0.length === 1 && i0[0].tipo === 'item' && i0[0].w === 1 && i0[0].h === 1e5 && i0[0].cor === 'azul' && i0[0].textura === 'liso' && i0[0].simbolo === '' && i0[0].parede === 0, 'sanitiza lixo');
 assert.throws(() => D.paraImportar({}), /não encontrei/); n++;
@@ -204,6 +237,7 @@ ok(DES.SIMBOLOS.every(s => /<svg viewBox="[-\d. ]+"/.test(DES.iconeSimbolo(s))),
   proj.andares[0].itens[1].lados = 'cb';
   proj.andares[0].itens[1].aberturas = [{ id: 'a', lado: 'b', pos: 30, larg: 90, tipo: 'porta' }];
   proj.andares[0].itens[0].travado = true;
+  proj.andares[0].itens[0].emoji = '🛋️'; proj.andares[0].itens[0].exp = 'fora'; proj.andares[0].itens[1].cor = '#123ABC';
   const url = await EX.gerarLink(proj, 'https://exemplo.github.io/planta/');
   ok(/^https:\/\/exemplo\.github\.io\/planta\/#p=z\.[A-Za-z0-9_-]+$/.test(url), 'link comprimido');
   const volta = D.paraImportar({ projeto: await EX.lerLink(url.slice(url.indexOf('#'))) })[0];
@@ -211,6 +245,7 @@ ok(DES.SIMBOLOS.every(s => /<svg viewBox="[-\d. ]+"/.test(DES.iconeSimbolo(s))),
   ok(volta.nome === 'Casa' && a.length === 2 && a[0].nome === '<b>Sofá</b>' && a[0].textura === 'rachura' && a[1].parede === 15, 'link ida e volta');
   ok(a[0].giro === 270 && a[1].lados === 'cb', 'link leva o giro e os lados com parede');
   ok(a[0].travado === true && a[1].aberturas.length === 1 && a[1].aberturas[0].tipo === 'porta' && a[1].aberturas[0].pos === 30, 'link leva as aberturas e o travado');
+  ok(a[0].emoji === '🛋️' && a[0].exp === 'fora' && a[1].cor === '#123ABC', 'link leva emoji, escolha da exportação e cor livre');
   ok(await EX.lerLink('#outra-coisa') === null, 'hash sem projeto é ignorado');
   await assert.rejects(() => EX.lerLink('#p=r.' + Buffer.from('{"v":2}').toString('base64url')), /link inválido/); n++;
   console.log(`${n} verificações ok`);
