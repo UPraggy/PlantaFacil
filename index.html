@@ -20,7 +20,7 @@
     document.documentElement.dataset.tema = t;
   })();
 </script>
-<link rel="stylesheet" href="style.css?v=fd33d8ba8f">
+<link rel="stylesheet" href="style.css?v=6fcae1bbbd">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -78,6 +78,11 @@
       <button type="button" role="radio" data-modo="editar" aria-checked="true" title="Editar (1): toque num cômodo ou objeto para editar; arraste para mover"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg><span>Editar</span></button>
       <button type="button" role="radio" data-modo="comodo" aria-checked="false" title="Mover cômodo (2): arraste o cômodo e tudo que está dentro vai junto"><svg class="ic" aria-hidden="true"><use href="#i-move"/></svg><span>Mover cômodo</span></button>
       <button type="button" role="radio" data-modo="vista" aria-checked="false" title="Mover planta (3): arraste para olhar; nada sai do lugar"><svg class="ic" aria-hidden="true"><use href="#i-hand"/></svg><span>Mover planta</span></button>
+    </div>
+
+    <div id="barraEscolha" role="region" aria-label="Escolher o que vai na exportação" hidden>
+      <span><strong>Escolhendo o que vai no arquivo</strong><small>Toque num cômodo ou móvel. ✓ desenho e medida · ↔ medidas detalhadas · ✕ fica de fora</small></span>
+      <button class="btn primario" id="btnEscolhaPronto" type="button"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Pronto</button>
     </div>
 
     <div id="vazio" hidden>
@@ -168,8 +173,17 @@
       </div>
 
       <div id="pCoresBloco" class="bloco extra">
-        <p class="rot">Cor</p>
-        <div class="cores" id="pCores" role="group" aria-label="Cor"></div>
+        <p class="rot">Cor <span class="dica-rot">o arco-íris escolhe qualquer cor</span></p>
+        <div id="pCores"></div>
+      </div>
+
+      <div id="pEmojiBloco" class="bloco extra">
+        <p class="rot">Emoji <span class="dica-rot">para marcar o que é; vai antes do nome</span></p>
+        <div class="emoji-linha">
+          <span class="campo campo-emoji"><input id="pEmoji" type="text" autocomplete="off" placeholder="🙂" aria-label="Emoji do item: escolha abaixo ou digite"></span>
+          <button type="button" class="btn" id="pEmojiTirar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg>Sem emoji</button>
+        </div>
+        <div class="emojis" id="pEmojis" role="group" aria-label="Emojis"></div>
       </div>
 
       <div class="bloco extra">
@@ -197,7 +211,7 @@
         </div>
         <div class="bloco" id="pIconesBloco">
           <p class="rot">Ícone (vista de cima)</p>
-          <div class="amostras rolar" id="pIcones" role="group" aria-label="Ícone"></div>
+          <div class="amostras" id="pIcones" role="group" aria-label="Ícone"></div>
         </div>
       </details>
 
@@ -215,9 +229,9 @@
 <div id="aviso" role="status" aria-live="polite" hidden></div>
 <input id="arq" type="file" accept=".json,application/json" aria-label="Arquivo de projeto para importar" hidden>
 
-<script src="js/dados.js?v=42da906eca"></script>
-<script src="js/desenho.js?v=87c2556f4d"></script>
-<script src="js/exportar.js?v=cd99befb4d"></script>
-<script src="js/app.js?v=dc5fedf877"></script>
+<script src="js/dados.js?v=03fadb9fc7"></script>
+<script src="js/desenho.js?v=11c48dac0e"></script>
+<script src="js/exportar.js?v=c31075753b"></script>
+<script src="js/app.js?v=a6546b9507"></script>
 </body>
 </html>
