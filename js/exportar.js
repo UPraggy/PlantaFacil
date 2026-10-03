@@ -18,10 +18,12 @@
   };
   const LATERAL = 40;
   // Respiro em volta do desenho, por lado, para as cotas: esquerda (cadeia), direita (total), cima, baixo (cadeia + total).
-  // Sem item selecionado, em volta só ficam os totais (direita e embaixo) e os rótulos das aberturas.
-  const respiroDe = (A, comSel) => (comSel
+  // Sem item selecionado, em volta só ficam os totais (direita e embaixo, se ligados) e os rótulos das aberturas.
+  const respiroDe = (A, comSel, comTotal) => (comSel
     ? { e: Math.round(30 + 48 * A), d: Math.round(30 + 62 * A), c: Math.round(30 + 48 * A), b: Math.round(30 + 78 * A) }
-    : { e: Math.round(24 + 20 * A), d: Math.round(30 + 58 * A), c: Math.round(24 + 22 * A), b: Math.round(30 + 58 * A) });
+    : comTotal
+      ? { e: Math.round(24 + 20 * A), d: Math.round(30 + 58 * A), c: Math.round(24 + 22 * A), b: Math.round(30 + 58 * A) }
+      : { e: Math.round(24 + 22 * A), d: Math.round(24 + 22 * A), c: Math.round(24 + 22 * A), b: Math.round(24 + 22 * A) });
   const topoDe = U => Math.round(86 * U), rodapeDe = U => Math.round(72 * U);
   const LINHA = 26;          // altura de uma linha da lista de medidas, antes de multiplicar por ui
   const LADO = { c: 'cima', d: 'direita', b: 'baixo', e: 'esquerda' };
@@ -152,7 +154,7 @@
   function paginaSVG(proj, andar, o) {
     const D = PF.desenho, t = D.TEMA_EXPORT, cfg = proj.config;
     const { W, H } = o;
-    const A = o.amplia || FORMATOS.pdf.amplia, U = o.ui || 1, u = n => +(n * U).toFixed(2), R = respiroDe(A, !!o.selId);
+    const A = o.amplia || FORMATOS.pdf.amplia, U = o.ui || 1, u = n => +(n * U).toFixed(2), R = respiroDe(A, !!o.selId, !!cfg.expTotal);
     const TOPO = topoDe(U), RODAPE = rodapeDe(U);
     const cp = D.caixa(andar.itens);
     const hLista = alturaLista(o.lista, U);
@@ -185,9 +187,10 @@
     entrada(92, c => caixaLeg(c, t.parede, t.paredeBorda), 'parede');
     entrada(96, c => caixaLeg(c, ci[0], ci[1], 'stroke-dasharray="3 2"'), 'cômodo');
     entrada(78, c => caixaLeg(c, az[0], az[1]), 'item');
-    entrada(88, c => linhaLeg(c, t.cota), 'medida');
-    entrada(80, c => linhaLeg(c, t.folga), 'folga');
-    entrada(80, c => linhaLeg(c, t.total), 'total');
+    // só entra na legenda o tipo de linha que está na folha
+    if (o.selId) entrada(88, c => linhaLeg(c, t.cota), 'medida');
+    if (o.selId || cfg.expFolgas) entrada(80, c => linhaLeg(c, t.folga), 'folga');
+    if (o.selId || cfg.expTotal) entrada(80, c => linhaLeg(c, t.total), 'total');
 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
       cabecalho(proj, andar.nome, Object.assign({ proporcao: o.escala && cp ? proporcao(k) : 0 }, o), W, t, U) + plano + lista +
@@ -203,17 +206,17 @@
   }
 
   // PNG: 1200 px de largura; a altura acompanha a planta (sem crescer demais).
-  function tamanhoPNG(cp, comSel) {
-    const W = 1200, F = FORMATOS.png, R = respiroDe(F.amplia, comSel), fixo = topoDe(F.ui) + rodapeDe(F.ui) + R.c + R.b;
+  function tamanhoPNG(cp, comSel, comTotal) {
+    const W = 1200, F = FORMATOS.png, R = respiroDe(F.amplia, comSel, comTotal), fixo = topoDe(F.ui) + rodapeDe(F.ui) + R.c + R.b;
     if (!cp) return { W, H: 700 };
     const k = Math.min(8, (W - 2 * LATERAL - R.e - R.d) / cp.w);
     return { W, H: Math.round(Math.min(2000, Math.max(700, cp.h * k + fixo))) };
   }
 
   // A4 em pé ou deitado: o que deixar a planta maior (escala k maior).
-  function tamanhoA4(cp, comSel) {
+  function tamanhoA4(cp, comSel, comTotal) {
     if (!cp) return { W: 1123, H: 794 };
-    const F = FORMATOS.pdf, R = respiroDe(F.amplia, comSel), fixo = topoDe(F.ui) + rodapeDe(F.ui);
+    const F = FORMATOS.pdf, R = respiroDe(F.amplia, comSel, comTotal), fixo = topoDe(F.ui) + rodapeDe(F.ui);
     const k = (W, H) => Math.min((W - 2 * LATERAL - R.e - R.d) / cp.w, (H - fixo - R.c - R.b) / cp.h);
     return k(1123, 794) >= k(794, 1123) ? { W: 1123, H: 794 } : { W: 794, H: 1123 };
   }
@@ -268,9 +271,17 @@
   }
 
   // tipo: 'png' | 'pdf' | 'json' | 'backup'. Devolve { blob, nome }.
-  // selId: item selecionado no andar atual — a imagem leva as cotas em cadeia dele.
+  // A folha do PNG como SVG (é também a prévia do menu Exportar).
+  function folhaPNG(proj, andar, selId) {
+    const F = FORMATOS.png, sel = proj.config.expCotas ? selId : null;
+    const { W, H } = tamanhoPNG(PF.desenho.caixa(andar.itens), !!sel, !!proj.config.expTotal);
+    return { W, H, svg: paginaSVG(proj, andar, { W, H, escala: false, pagina: 1, total: 1, selId: sel, amplia: F.amplia, ui: F.ui }) };
+  }
+
+  // selId: item selecionado no andar atual — com "Cotas do item selecionado" ligado, a folha leva as cotas em cadeia dele.
   async function gerar(tipo, proj, andar, estado, selId) {
     const D = PF.dados, base = slug(proj.nome);
+    if (!proj.config.expCotas) selId = null;
     if (tipo === 'json') {
       return { blob: new Blob([JSON.stringify(D.paraArquivo(proj), null, 2)], { type: 'application/json' }), nome: `${base}.planta.json` };
     }
@@ -279,9 +290,8 @@
       return { blob: new Blob([JSON.stringify(D.paraBackup(estado), null, 2)], { type: 'application/json' }), nome: `plantafacil-backup-${dia}.json` };
     }
     if (tipo === 'png') {
-      const F = FORMATOS.png, { W, H } = tamanhoPNG(PF.desenho.caixa(andar.itens), !!selId);
-      const svg = paginaSVG(proj, andar, { W, H, escala: false, pagina: 1, total: 1, selId, amplia: F.amplia, ui: F.ui });
-      const c = await svgParaCanvas(svg, W, H, F.densidade);
+      const { W, H, svg } = folhaPNG(proj, andar, selId);
+      const c = await svgParaCanvas(svg, W, H, FORMATOS.png.densidade);
       return { blob: await canvasParaBlob(c, 'image/png'), nome: `${base}-${slug(andar.nome)}.png` };
     }
     if (tipo === 'pdf') {
@@ -303,7 +313,7 @@
       const paginas = [];
       for (let i = 0; i < plano.length; i++) {
         const { a, tipo: tp, linhas } = plano[i];
-        const { W, H } = tp === 'planta' ? tamanhoA4(PF.desenho.caixa(a.itens), !!(selId && a.id === andar.id)) : { W: 794, H: 1123 };
+        const { W, H } = tp === 'planta' ? tamanhoA4(PF.desenho.caixa(a.itens), !!(selId && a.id === andar.id), !!proj.config.expTotal) : { W: 794, H: 1123 };
         const base = { W, H, pagina: i + 1, total: plano.length };
         const svg = tp === 'planta'
           ? paginaSVG(proj, a, Object.assign({ escala: true, selId: a.id === andar.id ? selId : null, amplia: FORMATOS.pdf.amplia, ui: FORMATOS.pdf.ui }, base))
@@ -396,5 +406,5 @@
     return desempacotar(JSON.parse(new TextDecoder().decode(bytes)));
   }
 
-  PF.exportar = { FORMATOS, gerar, baixar, compartilhar, podeCompartilhar, montarPDF, paginaSVG, paginaListaSVG, linhasMedidas, tamanhoA4, slug, gerarLink, lerLink, empacotar, desempacotar };
+  PF.exportar = { FORMATOS, gerar, baixar, compartilhar, podeCompartilhar, montarPDF, paginaSVG, paginaListaSVG, folhaPNG, linhasMedidas, tamanhoA4, slug, gerarLink, lerLink, empacotar, desempacotar };
 })(typeof window !== 'undefined' ? window : globalThis);

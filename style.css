@@ -125,6 +125,17 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 /* Adicionar é edição: só aparece no Editar */
 #palco:not([data-modo='editar']) .fab { display: none; }
 #palco[data-modo='vista'] #tela { cursor: grab; }
+
+/* exportar: prévia da folha e o que vai nela */
+.previa { border: 1px solid var(--linha2); border-radius: 12px; overflow: hidden; background: #fff; }
+.previa img { display: block; width: 100%; max-height: 40dvh; object-fit: contain; }
+.opcoes-arq { display: grid; gap: 6px; }
+.btn.opcao { justify-content: flex-start; text-align: left; min-height: 52px; padding: 8px 12px; gap: 12px; }
+.btn.opcao::before { flex: none; }
+.btn.opcao span { display: grid; gap: 2px; min-width: 0; }
+.btn.opcao strong { font-weight: 500; color: var(--fg); }
+.btn.opcao small { font-size: 12px; color: var(--fg3); }
+.btn.opcao[aria-pressed='true'] strong { color: var(--acento); }
 #palco[data-modo='vista'].arrastando-item #tela, #palco[data-modo='vista'] #tela:active { cursor: grabbing; }
 
 #palco.travado .fab { display: none; }

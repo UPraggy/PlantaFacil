@@ -1207,14 +1207,25 @@
   }
 
   // O que vai nos arquivos: opções próprias da exportação (a tela continua com os botões dela).
-  const ROTULOS_VER = { expMedidas: 'Medidas dos itens', expFolgas: 'Distâncias (folgas)', expTotal: 'Medida total', lista: 'Lista de medidas (no PDF)' };
-  function alternador(k, rotulo) {
-    const b = h('button', { type: 'button', 'aria-pressed': String(!!proj.config[k]), onclick: () => {
-      proj.config[k] = !proj.config[k];
-      b.setAttribute('aria-pressed', String(proj.config[k]));
-      atualizarPills(); mudou(); agendar();
-    } }, rotulo);
-    return b;
+  // Padrão limpo (pedido do Rafael): só as medidas escritas em cima dos cômodos e móveis.
+  function opcoesArquivo(aoMudar) {
+    const sel = itemSel();
+    const OPCOES = [
+      ['expMedidas', 'Medidas nos cômodos e móveis', 'largura × profundidade escrita em cima de cada um'],
+      ['expCotas', 'Cotas do item selecionado', sel ? `folga · medida · folga em volta de “${nomeDe(sel)}”` : 'selecione um item na planta antes, para usar'],
+      ['expFolgas', 'Distância entre os itens', 'todas as folgas, em vermelho'],
+      ['expTotal', 'Medida total da planta', 'largura e altura de tudo, por fora'],
+      ['lista', 'Lista de medidas', 'página extra no PDF, com tudo por escrito'],
+    ];
+    return h('div', { class: 'opcoes-arq', role: 'group', 'aria-label': 'O que vai nos arquivos' }, OPCOES.map(([k, titulo, desc]) => {
+      const sem = k === 'expCotas' && !sel;
+      const b = h('button', { type: 'button', class: 'btn alterna opcao', 'aria-pressed': String(!sem && !!proj.config[k]), disabled: sem, onclick: () => {
+        proj.config[k] = !proj.config[k];
+        b.setAttribute('aria-pressed', String(proj.config[k]));
+        mudou(); aoMudar();
+      } }, h('span', {}, h('strong', {}, titulo), h('small', {}, desc)));
+      return b;
+    }));
   }
 
   const baseDoSite = () => location.href.split('#')[0].split('?')[0];
@@ -1252,15 +1263,21 @@
       return h('div', { class: 'linha-export' }, h('div', {}, h('strong', {}, titulo), h('small', {}, desc)), h('div', { class: 'par' }, comp, baixar));
     };
     const copiar = h('button', { type: 'button', class: 'btn primario', onclick: () => copiarLink(copiar) }, 'Copiar link');
+    // prévia da folha (a mesma do PNG), refeita a cada opção ligada ou desligada
+    const imgPrevia = h('img', { alt: `Prévia da folha do andar “${andar.nome}”` });
+    const previa = h('div', { class: 'previa' }, imgPrevia);
+    const atualizarPrevia = () => {
+      try { imgPrevia.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(EX.folhaPNG(proj, andar, selId).svg); } catch (e) { previa.hidden = true; }
+    };
+    atualizarPrevia();
     const enviar = navigator.share && matchMedia('(pointer: coarse)').matches
       ? h('button', { type: 'button', class: 'btn', onclick: enviarLink }, 'Enviar') : null;
     abrirModal('Compartilhar e exportar',
       h('div', { class: 'linha-export destaque' },
         h('div', {}, h('strong', {}, 'Link para compartilhar'), h('small', {}, 'Quem abrir recebe uma cópia do projeto. Nada vai para servidor.')),
         h('div', { class: 'par' }, enviar, copiar)),
-      h('div', {}, h('p', { class: 'rot' }, 'Mostrar nos arquivos'),
-        h('div', { class: 'pills' }, Object.entries(ROTULOS_VER).map(([k, r]) => alternador(k, r)))),
-      linha('png', 'Imagem (PNG)', itemSel() ? `Andar “${andar.nome}” com as cotas de “${nomeDe(itemSel())}”` : `Só o andar “${andar.nome}”`),
+      h('div', { class: 'bloco' }, h('p', { class: 'rot' }, 'O que vai nos arquivos'), previa, opcoesArquivo(atualizarPrevia)),
+      linha('png', 'Imagem (PNG)', `O andar “${andar.nome}”, como na prévia`),
       linha('pdf', 'PDF', proj.config.lista ? `A4: a planta de cada andar e a lista de medidas dele` : `${plural(proj.andares.length, 'página', 'páginas')} · uma por andar, em A4`),
       linha('json', 'Arquivo do projeto', 'Para guardar e importar depois (.json)'),
       linha('backup', 'Backup de tudo', `${plural(estado.projetos.length, 'projeto', 'projetos')} num arquivo só`),
