@@ -182,6 +182,9 @@ Os efeitos de JS entram em `renderizar`, que segue pedindo quadros enquanto houv
 
 ## Exportação (`js/exportar.js`)
 
+- **O que vai na folha** (`config`): `expMedidas` (ligado), `expCotas` (cotas em cadeia do selecionado), `expFolgas`, `expTotal` e `lista` (página do PDF). Desde 03/10 o padrão é limpo: só `expMedidas` e `lista`. `gerar()` zera o `selId` sem `expCotas`; `respiroDe(A, comSel, comTotal)` só reserva espaço para o que vai na folha, e a legenda só lista os tipos de linha presentes. Projeto sem `config.expV >= 2` (de antes) volta uma vez para o padrão limpo em `limparProjeto`.
+- **Prévia:** `EX.folhaPNG(proj, andar, selId)` devolve `{ W, H, svg }` da folha do PNG; o menu Exportar mostra esse SVG num `<img>` e refaz a cada opção (`opcoesArquivo` em `app.js`).
+
 A folha é pensada para ser **lida inteira no celular, sem zoom**; a resolução alta é para quem quiser dar zoom.
 
 - **`FORMATOS`** (tamanhos na folha, por formato):

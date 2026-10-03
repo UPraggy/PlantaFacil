@@ -16,7 +16,7 @@
   const TIPOS_ABERTURA = ['janela', 'porta', 'vao'];
   const LARGURA_ABERTURA = { janela: 120, porta: 80, vao: 90 };
   // exp*: o que vai nos arquivos exportados (independe dos botões da tela). Por padrão, tudo.
-  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: true, expTotal: true };
+  const CONFIG_PADRAO = { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: false, expTotal: false, expCotas: false, expV: 2 };
   // Valores iniciais do formulário "Adicionar" (o usuário digita o tamanho que quiser).
   const NOVO_PADRAO = {
     item: { nome: '', w: 100, h: 60, cor: 'azul' },
@@ -80,6 +80,9 @@
     const andares = Array.isArray(src.andares) ? src.andares.map(a => limparAndar(a, manterId)) : [];
     if (!andares.length) andares.push(novoAndar('Térreo'));
     const c = Object.assign({}, CONFIG_PADRAO, src.config);
+    // Até 03/10/2026 a folha saía com folgas, total e cotas do selecionado ligados por padrão e ficava confusa.
+    // Projeto daquela época (sem expV 2) volta uma vez para o padrão limpo: só as medidas escritas nos itens.
+    const antigo = !(src.config && Number(src.config.expV) >= 2);
     const agora = Date.now();
     return {
       id: manterId && src.id ? String(src.id) : uid(),
@@ -91,7 +94,8 @@
       config: {
         encaixe: ENCAIXES.includes(Number(c.encaixe)) ? Number(c.encaixe) : CONFIG_PADRAO.encaixe,
         ima: !!c.ima, medidas: !!c.medidas, folgas: !!c.folgas, total: !!c.total, travado: !!c.travado, lista: !!c.lista,
-        expMedidas: !!c.expMedidas, expFolgas: !!c.expFolgas, expTotal: !!c.expTotal,
+        expMedidas: !!c.expMedidas, expFolgas: !antigo && !!c.expFolgas, expTotal: !antigo && !!c.expTotal,
+        expCotas: !antigo && !!c.expCotas, expV: 2,
       },
     };
   }

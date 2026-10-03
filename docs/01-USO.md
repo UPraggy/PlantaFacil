@@ -82,6 +82,12 @@ Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no com
 
 ## 7. Compartilhar e guardar
 
+**O que vai nos arquivos (PNG e PDF):** no menu Compartilhar e exportar, a **prévia** mostra a folha como vai sair e muda na hora. Por padrão a folha é limpa: só o nome e a medida **escritos em cima** de cada cômodo e móvel. Ligue o que quiser a mais:
+- **Cotas do item selecionado**: folga · medida · folga em volta do item que estava selecionado (selecione antes de abrir o menu);
+- **Distância entre os itens**: todas as folgas, em vermelho;
+- **Medida total da planta**: largura e altura de tudo, por fora;
+- **Lista de medidas**: página extra no PDF.
+
 Botão de compartilhar no topo (seta para cima):
 
 | Opção | Para quê |

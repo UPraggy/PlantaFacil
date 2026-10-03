@@ -14,7 +14,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const it = (tipo, nome, x, y, w, h, extra) => Object.assign({ id: nome.toLowerCase().replace(/\W/g, ''), tipo, nome, x, y, w, h, cor: 'azul', textura: 'liso', simbolo: '', parede: 0, lados: '', giro: 0, aberturas: [], travado: false }, extra);
 const projeto = {
   id: 'p1', nome: 'Cozinha da casa', criado: Date.now(), atualizado: Date.now(), andarAtual: 'a1',
-  config: { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: true, expTotal: true },
+  config: { encaixe: 5, ima: true, medidas: true, folgas: false, total: false, travado: false, lista: true, expMedidas: true, expFolgas: true, expTotal: true, expCotas: true, expV: 2 },
   andares: [{ id: 'a1', nome: 'Térreo', vista: null, itens: [
     it('comodo', 'Cozinha', 0, 0, 320, 260, { cor: 'cinza', parede: 15, lados: 'cdbe', aberturas: [
       { id: 'j1', lado: 'c', pos: 180, larg: 100, tipo: 'janela' }, { id: 'p1', lado: 'b', pos: 200, larg: 80, tipo: 'porta' }] }),

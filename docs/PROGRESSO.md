@@ -8,8 +8,21 @@
 
 - **No ar:** https://plantafacil.rafaelmr.com.br. O endereço antigo, https://upraggy.github.io/PlantaFacil/, ainda abre direto em vez de redirecionar (veja PENDENTE 3).
 - **Repositório:** `UPraggy/PlantaFacil` (público). `main` tem o código; `gh-pages` tem o site gerado pelo deploy.
-- **Qualidade:** `npm test` = 94 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
+- **Qualidade:** `npm test` = 99 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
+
+## 03/10/2026 (3) — folha limpa por padrão, com prévia e opções
+
+Pedido do Rafael (com a captura de uma exportação cheia de linhas cruzadas): "exportei o projeto mas ficou confusa as medidas, deixe eu selecionar o que quero, por padrão deixe só as medidas dos cômodos e móveis escritas em cima deles como estão".
+
+**Feito:**
+- **Padrão limpo:** a folha leva só nome e medida escritos em cima de cada cômodo e móvel. Cotas do item selecionado (`expCotas`, novo), folgas e total vêm desligados.
+- **Menu Exportar → "O que vai nos arquivos":** prévia da folha (o mesmo SVG do PNG, `EX.folhaPNG`) e cinco opções com explicação. "Cotas do item selecionado" fica desabilitada sem seleção.
+- **Folha enxuta:** sem o total e sem as cotas, a margem em volta encolhe (`respiroDe`) e a legenda não lista linhas que não estão na folha.
+- **Migração:** projeto salvo antes (sem `config.expV` 2) volta **uma vez** para o padrão limpo, porque os de antes vinham com tudo ligado por padrão, não por escolha. Depois disso vale o que o usuário ligar.
+- `npm run amostra` continua exportando a cozinha com tudo ligado (é a folha mais cheia, a que testa legibilidade).
+
+**Como conferi:** `npm test` 99 ok (5 novas: padrão, migração, escolha mantida, folha limpa sem legenda de linhas, folha cheia com as três). No preview a 375 px: um projeto com folgas e total ligados abriu limpo, e ligar "Distância entre os itens" mudou a prévia na hora. `npm run e2e` ok (o PNG saiu só com Quarto, Cama e Mesa com as medidas). `npm run amostra` sem erros.
 
 ## 03/10/2026 (2) — nada se mexe sem escolher o modo
 

@@ -54,7 +54,7 @@ Abre em `http://localhost:5180`. O servidor imita o GitHub Pages: um caminho que
 npm test
 ```
 
-São 94 verificações: folgas, cadeia de cotas, paredes por lado, aberturas, giro do cômodo com o conteúdo, o que vai junto no Mover cômodo, travar, importação e sanitização, o PDF gerado e o link de compartilhar.
+São 99 verificações: folgas, cadeia de cotas, paredes por lado, aberturas, giro do cômodo com o conteúdo, o que vai junto no Mover cômodo, travar, importação e sanitização, o PDF gerado e o link de compartilhar.
 
 Para ver no celular sem celular: com o `npm run dev` no ar, `npm run e2e` abre um Chromium emulando um Android (toque de verdade), percorre o app inteiro e salva capturas e os arquivos exportados. E `npm run amostra` exporta uma cozinha de exemplo e gera prévias com 390 px de largura, para conferir a olho se as medidas se leem no celular.
 

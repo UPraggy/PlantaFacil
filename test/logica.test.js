@@ -137,6 +137,22 @@ ok(pgLista.includes('MEDIDAS') && pgLista.includes('>Cooktop<') && pgLista.inclu
 ok(!/NaN|undefined/.test(pgPdf + pgPng + pgLista), 'páginas sem NaN/undefined');
 ok(D.limparProjeto({}, false).config.lista === true, 'lista de medidas ligada por padrão');
 
+// --- folha limpa por padrão: só as medidas escritas nos itens; o resto o usuário liga
+const cfgNovo = D.novoProjeto('x').config;
+ok(cfgNovo.expMedidas && !cfgNovo.expFolgas && !cfgNovo.expTotal && !cfgNovo.expCotas, 'padrão: só medidas nos itens');
+const cfgVelho = D.limparProjeto({ config: { expMedidas: true, expFolgas: true, expTotal: true } }, false).config;
+ok(cfgVelho.expMedidas && !cfgVelho.expFolgas && !cfgVelho.expTotal && cfgVelho.expV === 2, 'projeto de antes de 03/10 volta uma vez para o padrão limpo');
+const cfgEscolha = D.limparProjeto({ config: { expV: 2, expFolgas: true, expTotal: true, expCotas: true } }, false).config;
+ok(cfgEscolha.expFolgas && cfgEscolha.expTotal && cfgEscolha.expCotas, 'o que o usuário ligou depois fica ligado');
+const legDe = svg => [...svg.matchAll(/>(medida|folga|total)<\/text>/g)].map(m => m[1]).join();
+projX.config = Object.assign({}, cfgNovo);
+const limpa = EX.folhaPNG(projX, andarX, 'Cooktop');
+ok(legDe(limpa.svg) === '' && !limpa.svg.includes('>total '), 'folha limpa: sem cotas, folgas nem total, e sem eles na legenda');
+projX.config = Object.assign({}, cfgNovo, { expTotal: true, expCotas: true });
+const cheia = EX.folhaPNG(projX, andarX, 'Cooktop');
+ok(legDe(cheia.svg) === 'medida,folga,total' && cheia.H >= limpa.H, 'ligando cotas e total, eles entram na folha e na legenda');
+projX.config = Object.assign({}, cfgNovo);
+
 // --- folgas básicas
 const solto = [it('item', 'a', 0, 0, 50, 50), it('item', 'b', 70, 0, 50, 50)];
 const gs = DES.folgasDe(solto[0], solto);
