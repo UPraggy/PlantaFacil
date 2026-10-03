@@ -231,19 +231,22 @@
       }
     }
   }
+  // Tudo o que está inteiro dentro do cômodo, contando as paredes dele (itens, paredes soltas, outros cômodos).
+  // É o que vai junto quando o cômodo gira ou é arrastado no modo "Mover cômodo".
+  function dentroDoComodo(alvo, itens) {
+    const L = limites(alvo), E = 0.01, junto = [];
+    for (const o of itens) {
+      if (o.id === alvo.id) continue;
+      const b = limites(o);
+      if (b.x >= L.x - E && b.y >= L.y - E && b.x + b.w <= L.x + L.w + E && b.y + b.h <= L.y + L.h + E) junto.push(o);
+    }
+    return junto;
+  }
   // Gira o item no lugar. Num cômodo, gira junto tudo o que está dentro dele (itens, paredes soltas) e os lados
   // com parede. Devolve quantos itens foram junto.
   function girar(alvo, itens) {
     const cx = alvo.x + alvo.w / 2, cy = alvo.y + alvo.h / 2;
-    const junto = [];
-    if (alvo.tipo === 'comodo') {
-      const L = limites(alvo), E = 0.01;
-      for (const o of itens) {
-        if (o.id === alvo.id) continue;
-        const b = limites(o);
-        if (b.x >= L.x - E && b.y >= L.y - E && b.x + b.w <= L.x + L.w + E && b.y + b.h <= L.y + L.h + E) junto.push(o);
-      }
-    }
+    const junto = alvo.tipo === 'comodo' ? dentroDoComodo(alvo, itens) : [];
     for (const i of [alvo, ...junto]) girar90(i, cx, cy);
     return junto.length;
   }
@@ -630,6 +633,6 @@
   PF.desenho = {
     TEMAS, TEMA_EXPORT, CORES, FONTE, MONO,
     SIMBOLOS: Object.keys(SIMBOLOS),
-    fmt, esc, caixa, limites, ladosDe, aberturasNoLado, recipiente, girar, folgasDe, conteudo, grade, iconeSimbolo, iconeTextura,
+    fmt, esc, caixa, limites, ladosDe, aberturasNoLado, recipiente, dentroDoComodo, girar, folgasDe, conteudo, grade, iconeSimbolo, iconeTextura,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

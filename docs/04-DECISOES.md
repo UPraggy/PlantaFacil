@@ -49,6 +49,7 @@ O Rafael gostou ("gostei demais") e pediu um sistema "no estilo da imagem". **Es
 | 02/10 | "não achei quadrado para editar as paredes"; "o trancar não funciona" | Editor de paredes sempre à vista no cômodo; tocar no miolo seleciona; travado = não move nem edita |
 | 02/10 | "teste no celular… pode ser no navegador, basta usar o inspecionar" | `npm run e2e`: Chromium emulando Android com toque de verdade |
 | 02/10 | "melhore a exportação… visibilidade das medidas, o PDF também"; "não precisa crescer tanto a imagem, só boa resolução, e legenda de proporção" | Medidas 1,2×, PNG 3× e PDF 2,5× de resolução, régua + proporção 1:N, lista de medidas no PDF |
+| 03/10 | "opção de alternar entre modo de edição do cômodo ou objeto, modo de arrastar o cômodo e modo de arrastar o plano para eu ver, coloque um menu fácil" | Menu de 3 modos no alto da planta: Editar · Mover cômodo (leva tudo o que está dentro) · Mover planta (só olhar). Vira só ícones com o painel aberto no celular |
 | 02/10 | "teste a exportação, está muito pequena as informações de medidas"; "não dá para ver as medidas internas" | Folha legível no celular sem zoom (medidas 2,5× no PNG, 1,8× no PDF); todas as medidas de dentro vão para a folha, ligadas por padrão e separadas da tela; nada some por falta de espaço; proporção no cabeçalho do PDF; A4 em pé ou deitado, o que der a planta maior |
 
 ## Decisões técnicas (e o motivo)

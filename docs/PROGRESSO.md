@@ -4,12 +4,26 @@
 > `docs/02-ARQUITETURA.md` e `docs/04-DECISOES.md`. Para usar o app: `docs/01-USO.md`.
 > Para publicar: `docs/03-PUBLICACAO.md`. Não use o conector Memória Babita.
 
-## Estado em 02/10/2026
+## Estado em 03/10/2026
 
 - **No ar:** https://plantafacil.rafaelmr.com.br. O endereço antigo, https://upraggy.github.io/PlantaFacil/, ainda abre direto em vez de redirecionar (veja PENDENTE 3).
 - **Repositório:** `UPraggy/PlantaFacil` (público). `main` tem o código; `gh-pages` tem o site gerado pelo deploy.
-- **Qualidade:** `npm test` = 92 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
+- **Qualidade:** `npm test` = 94 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
+
+## 03/10/2026 — menu de modos: Editar · Mover cômodo · Mover planta
+
+Pedido do Rafael: "quero opção de alternar entre modo de edição do cômodo ou objeto, modo de arrastar o cômodo e modo de arrastar o plano para eu ver, coloque um menu fácil para isso, e publique no git".
+
+**Feito:**
+- **Menu `#modos`** logo abaixo das pílulas (Medidas, Folgas…): três botões grandes, ícone em cima e nome embaixo, o ativo em âmbar. Teclas `1`, `2`, `3`; setas andam entre eles (grupo de rádio acessível).
+- **Editar:** tudo como era (toque abre o painel, arrasta o objeto, bolinhas redimensionam).
+- **Mover cômodo:** arrastar em qualquer ponto do cômodo, mesmo em cima de um móvel, leva o cômodo **com tudo o que está dentro** (`DES.dentroDoComodo`, extraído do `girar` para os dois usarem o mesmo critério). Encaixe e ímã valem, mas o ímã só olha o que fica parado. Cômodo travado (ou planta travada) treme e avisa. Pinça no meio do arrasto desfaz o arrasto, como no Editar.
+- **Mover planta:** todo arrasto de um dedo só mexe a vista; tocar não seleciona. Toque duplo e pinça continuam dando zoom.
+- Entrar em Mover cômodo/Mover planta fecha o painel; adicionar item volta para Editar.
+- **Celular com painel aberto:** o menu vira só ícones no canto direito, na linha do "Travar". A margem de cima do enquadramento agora é medida do menu real (`margens()`); com margem fixa maior, a planta ficava minúscula com o painel aberto (o e2e pegou isso).
+
+**Como conferi:** `npm test` 94 ok (2 novas para `dentroDoComodo`). `npm run e2e` ok, com etapa nova: no Mover cômodo o quarto andou e a mesa de dentro foi junto; no Mover planta nada saiu do lugar e o painel ficou fechado; nenhum erro no console. No preview a 375 px: os três nomes cabem inteiros, e o tema claro no computador também ficou certo.
 
 ## 02/10/2026 (fim da noite) — folha legível no celular, com todas as medidas de dentro
 

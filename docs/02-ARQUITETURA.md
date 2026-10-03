@@ -135,11 +135,14 @@ DES.conteudo(andar, { z, t, medidas, folgasTodos, total, selId, hoverId, fx, fan
   | Gesto | Quando |
   |---|---|
   | `redim` | começou numa alça do selecionado (raio de 22 px) |
+  | `moverComodo` | modo Mover cômodo, começou dentro de um cômodo (`comodoEm`: o menor que contém o ponto, contando as paredes). Leva junto `DES.dentroDoComodo` (o mesmo critério do girar), com o ímã olhando só o que fica parado |
   | `mover` | começou num item (passa a mover depois de 4 px) |
   | `pan` | começou no vazio, ou com o botão do meio do mouse |
   | `pinca` | segundo dedo; se havia arrasto em curso, ele é desfeito |
   | `espera` | sobrou um dedo depois da pinça |
 
+  - **Modos** (`modo` em `app.js`, menu `#modos`, `definirModo()`): `editar` é o comportamento abaixo; `comodo` troca a escolha do alvo por `comodoEm` e o gesto `moverComodo` (fora de cômodo = `pan`); `vista` faz todo gesto de um dedo virar `pan`. Trocar para `comodo`/`vista` desseleciona; criar item volta para `editar`. O modo não é salvo (abrir o app = Editar). `palco.dataset.modo` dá o cursor no CSS.
+  - **Margem do alto** (`margens()`): medida do `#modos` real (`offsetTop + offsetHeight`), porque no celular com o painel aberto o menu encolhe para ícones na linha do Travar; com margem fixa a planta ficava minúscula.
   - **Toque sem mover:** no vazio desseleciona, no item seleciona.
   - **Toque de novo no selecionado** com outros itens sob o dedo (`itensEm` lista da frente para trás): depois de 330 ms, se não veio o segundo toque do toque duplo, passa para o próximo da lista (`gesto.ciclo`).
   - **O selecionado é o arrastado** se estiver sob o dedo, mesmo atrás de outro.

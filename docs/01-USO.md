@@ -22,6 +22,16 @@ Para uma parede solta (uma divisória, por exemplo), escolha **Parede**, depois 
 
 ## 3. Mexer
 
+No alto da planta fica o menu **do que o dedo faz**. Toque numa das três opções (no computador, teclas `1`, `2` e `3`):
+
+| Modo | O que acontece |
+|---|---|
+| ✏️ **Editar** (o normal) | Toque num cômodo ou objeto para abrir o painel e editar; arraste o objeto para mover; bolinhas mudam o tamanho. |
+| ✥ **Mover cômodo** | Arraste em qualquer lugar do cômodo (até em cima de um móvel) e **ele vai inteiro, com tudo o que está dentro**: móveis, paredes soltas, janelas e portas. Gruda nas bordas dos outros cômodos (ímã). |
+| ✋ **Mover planta** | Só para olhar: arrastar mexe a vista e nada sai do lugar. Dois dedos ampliam, como sempre. |
+
+Trocar para Mover cômodo ou Mover planta fecha o painel, para a planta ficar com a tela toda. Ao adicionar algo, o app volta sozinho para Editar. Com o painel aberto no celular, o menu encolhe para três ícones no canto de cima.
+
 Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no computador). No celular ele abre compacto, com nome, medidas e ações; o botão **Ajustes** do painel mostra o resto (distâncias, cor, textura, mais opções).
 
 | Quero… | Como |
@@ -89,4 +99,4 @@ Na folha nada some: nome ou medida que não cabe dentro de um item pequeno vai e
 
 ## 8. Atalhos no computador
 
-`N` adiciona · `R` gira · `Delete` exclui (item travado pede para destravar) · `Ctrl+Z` / `Ctrl+Y` desfaz e refaz · `Ctrl+D` duplica · setas movem o item (com `Shift`, 10×) · `+` / `−` zoom · `Esc` fecha o painel ou a janela.
+`1` / `2` / `3` Editar, Mover cômodo, Mover planta · `N` adiciona · `R` gira · `Delete` exclui (item travado pede para destravar) · `Ctrl+Z` / `Ctrl+Y` desfaz e refaz · `Ctrl+D` duplica · setas movem o item (com `Shift`, 10×) · `+` / `−` zoom · `Esc` fecha o painel ou a janela.

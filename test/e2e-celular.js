@@ -138,6 +138,34 @@ const anota = (...a) => { const l = a.join(' '); log.push(l); console.log(l); };
   await shot('11-exportar');
   await page.locator('.modal .modal-topo .icone').tap(); await espera(300);
 
+  // modos: "Mover cômodo" arrasta o quarto com tudo dentro; "Mover planta" só mexe a vista
+  const qx = await centroTexto('Quarto');
+  await tocarEm(qx.l + 20, qx.t + 60); // seleciona o quarto: a mesa nova vai para dentro dele
+  await formulario('item', 'Mesa', 60, 60);
+  await page.locator('.modal button[type=submit]').tap(); await espera(900);
+  await page.locator('[data-modo=comodo]').tap(); await espera(400);
+  await shot('11b-modo-mover-comodo');
+  const antesModo = await estado();
+  const dentroIds = await page.evaluate(() => {
+    const e = JSON.parse(localStorage.getItem('plantafacil:v1')), p = e.projetos.find(x => x.id === e.atualId), it = p.andares[0].itens;
+    return PF.desenho.dentroDoComodo(it.find(i => i.nome === 'Quarto'), it).map(i => i.id);
+  });
+  const qm = await centroTexto('Quarto');
+  await arrastar(qm.x + 10, qm.y + 30, qm.x + 70, qm.y + 60);
+  const depoisModo = await estado();
+  const delta = nome => { const a = antesModo.itens.find(i => i.nome === nome), b = depoisModo.itens.find(i => i.nome === nome); return [b.x - a.x, b.y - a.y]; };
+  const dq = delta('Quarto');
+  const juntoOk = dentroIds.every(id => { const a = antesModo.itens.find(i => i.id === id), b = depoisModo.itens.find(i => i.id === id); return b.x - a.x === dq[0] && b.y - a.y === dq[1]; });
+  anota('mover cômodo: quarto andou', dq.join(','), '| itens dentro:', dentroIds.length, '| foram junto:', juntoOk);
+  await page.locator('[data-modo=vista]').tap(); await espera(400);
+  const qv = await centroTexto('Quarto');
+  await arrastar(qv.x + 10, qv.y + 30, qv.x - 50, qv.y + 40);
+  const depoisVista = await estado();
+  const vistaParada = depoisVista.itens.every(i => { const a = depoisModo.itens.find(x => x.id === i.id); return a.x === i.x && a.y === i.y; });
+  anota('mover planta: nada saiu do lugar:', vistaParada, '| painel aberto:', await page.evaluate(() => !document.getElementById('painel').hidden));
+  await shot('11c-modo-mover-planta');
+  await page.locator('[data-modo=editar]').tap(); await espera(400);
+
   // arquivos exportados (o mesmo código do botão Baixar)
   const arquivos = await page.evaluate(async () => {
     const e = JSON.parse(localStorage.getItem('plantafacil:v1'));
@@ -181,6 +209,9 @@ const anota = (...a) => { const l = a.join(' '); log.push(l); console.log(l); };
   if (erros.length) falhas.push('erros no console');
   if (depoisTrav.x !== antes.x || depoisTrav.y !== antes.y) falhas.push('item travado saiu do lugar');
   if (movida.x === antes.x && movida.y === antes.y) falhas.push('item destravado não moveu');
+  if (!dq[0] && !dq[1]) falhas.push('modo Mover cômodo não moveu o cômodo');
+  if (!juntoOk) falhas.push('modo Mover cômodo deixou item de dentro para trás');
+  if (!vistaParada) falhas.push('modo Mover planta tirou item do lugar');
   if (falhas.length) { console.error('✖ ' + falhas.join('; ')); process.exitCode = 1; } else console.log('✓ fluxo do celular ok · capturas em ' + OUT);
   fs.writeFileSync(path.join(OUT, 'log.txt'), log.join('\n'));
   await browser.close();

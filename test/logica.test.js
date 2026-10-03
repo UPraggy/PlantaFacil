@@ -57,6 +57,14 @@ ok(sala2.x === 0 && sala2.y === 0 && sala2.w === 400 && sala2.lados === 'cde' &&
 const solo = it('item', 'mesa', 0, 0, 120, 80);
 ok(DES.girar(solo, [solo]) === 0 && solo.w === 80 && solo.h === 120 && solo.x === 20 && solo.y === -20, 'item sozinho gira no próprio centro');
 
+// --- modo "Mover cômodo": vai junto o que está inteiro dentro dele (contando a parede), nada de fora
+const cz = it('comodo', 'cozinha', 0, 0, 300, 200, { parede: 15, lados: 'cdbe' });
+const bancM = it('item', 'bancada', 0, 0, 200, 60), piaM = it('item', 'pia', 20, 10, 50, 40);
+const naParede = it('parede', 'mureta', -15, 50, 15, 80), meio = it('item', 'meio-fora', 280, 100, 60, 40), longe = it('item', 'longe', 500, 0, 50, 50);
+const juntos = DES.dentroDoComodo(cz, [cz, bancM, piaM, naParede, meio, longe]).map(i => i.id);
+ok(juntos.join() === 'bancada,pia,mureta', 'leva bancada, pia e a parede encostada; deixa o que está meio fora e o de longe');
+ok(DES.dentroDoComodo(cz, [cz]).length === 0, 'cômodo vazio não leva nada');
+
 // --- aberturas: janela, porta e vão nas paredes do cômodo
 const quarto = it('comodo', 'quarto', 0, 0, 300, 250, { parede: 15, lados: 'cdbe', aberturas: [] });
 const jan = D.novaAbertura(quarto, 'janela');
