@@ -59,6 +59,9 @@ const anota = (...a) => { const l = a.join(' '); log.push(l); console.log(l); };
   await page.goto(URL);
   await espera(1500);
   await shot('01-vazio');
+  // regra: abre em "Mover planta" e o Adicionar só existe no Editar
+  const abertura = await page.evaluate(() => ({ modo: document.getElementById('palco').dataset.modo, fab: getComputedStyle(document.getElementById('btnAdd')).display }));
+  anota('ao abrir:', JSON.stringify(abertura));
 
   // cômodo pelo botão do estado vazio, sem a parede de baixo
   await page.locator('#btnPrimeiro').tap();
@@ -162,7 +165,15 @@ const anota = (...a) => { const l = a.join(' '); log.push(l); console.log(l); };
   await arrastar(qv.x + 10, qv.y + 30, qv.x - 50, qv.y + 40);
   const depoisVista = await estado();
   const vistaParada = depoisVista.itens.every(i => { const a = depoisModo.itens.find(x => x.id === i.id); return a.x === i.x && a.y === i.y; });
-  anota('mover planta: nada saiu do lugar:', vistaParada, '| painel aberto:', await page.evaluate(() => !document.getElementById('painel').hidden));
+  // tocar num item fora do Editar não abre nada
+  const cv = await page.evaluate(() => {
+    const e = JSON.parse(localStorage.getItem('plantafacil:v1')), p = e.projetos.find(x => x.id === e.atualId), a = p.andares[0];
+    const i = a.itens.find(x => x.nome === 'Mesa'), v = a.vista, r = document.getElementById('tela').getBoundingClientRect();
+    return { x: r.left + (i.x + i.w / 2) * v.z + v.tx, y: r.top + (i.y + i.h / 2) * v.z + v.ty };
+  });
+  await tocarEm(cv.x, cv.y);
+  const painelVista = await page.evaluate(() => !document.getElementById('painel').hidden);
+  anota('mover planta: nada saiu do lugar:', vistaParada, '| toque no item abriu painel:', painelVista, '| aviso:', await avisoTxt());
   await shot('11c-modo-mover-planta');
   await page.locator('[data-modo=editar]').tap(); await espera(400);
 
@@ -202,6 +213,7 @@ const anota = (...a) => { const l = a.join(' '); log.push(l); console.log(l); };
   await pg2.goto(URL);
   await pg2.waitForFunction(() => [...document.querySelectorAll('#mundo text')].some(x => x.textContent === 'Cama'), null, { timeout: 8000 }); await pg2.waitForTimeout(500);
   const cama = await pg2.evaluate(() => { const t = [...document.querySelectorAll('#mundo text')].find(x => x.textContent === 'Cama'); const b = t.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
+  await pg2.keyboard.press('1'); await pg2.waitForTimeout(300); // abre em Mover planta: liga o Editar
   await pg2.mouse.click(cama.x, cama.y); await pg2.waitForTimeout(900);
   await pg2.screenshot({ path: path.join(OUT, '13-desktop.png') }); anota('📸', '13-desktop');
   anota('erros no console:', erros.length ? erros.join(' || ') : 'nenhum');
@@ -212,6 +224,8 @@ const anota = (...a) => { const l = a.join(' '); log.push(l); console.log(l); };
   if (!dq[0] && !dq[1]) falhas.push('modo Mover cômodo não moveu o cômodo');
   if (!juntoOk) falhas.push('modo Mover cômodo deixou item de dentro para trás');
   if (!vistaParada) falhas.push('modo Mover planta tirou item do lugar');
+  if (painelVista) falhas.push('toque no Mover planta abriu o painel');
+  if (abertura.modo !== 'vista' || abertura.fab !== 'none') falhas.push('o app não abriu só para ver');
   if (falhas.length) { console.error('✖ ' + falhas.join('; ')); process.exitCode = 1; } else console.log('✓ fluxo do celular ok · capturas em ' + OUT);
   fs.writeFileSync(path.join(OUT, 'log.txt'), log.join('\n'));
   await browser.close();

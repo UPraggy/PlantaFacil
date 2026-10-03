@@ -11,6 +11,18 @@
 - **Qualidade:** `npm test` = 94 verificações ok; `npm run e2e` (celular emulado + computador) ok; `npm run amostra` sem erros. No Visual Inspector, o design_radar deu 97 (A) e o audit_accessibility deu 100 (era 79).
 - **Commits:** `142bede` (o app), `88953bb` (domínio no deploy) e os de deploy no `gh-pages`. Os primeiros saíram creditados à conta LGD-Ledgermany (PENDENTE 1).
 
+## 03/10/2026 (2) — nada se mexe sem escolher o modo
+
+Pedido do Rafael: "não posso mover nada nem fazer outra edição a menos que ative o modo".
+
+**Feito:**
+- O app **abre em Mover planta**: arrastar só mexe a vista e tocar não abre painel. O modo não fica salvo, então é assim a cada abertura.
+- **Adicionar é edição:** o botão some fora do Editar, e a tecla N só mostra o aviso. O "Criar cômodo" do projeto vazio é um pedido claro, por isso ele mesmo liga o Editar.
+- Tocar num item fora do Editar mostra "Para mexer, escolha “Editar” ou “Mover cômodo” no alto." e o menu pisca em âmbar (`dicaModo`, uma vez a cada 4 s; sem animação com "reduzir movimento").
+- A dica da primeira visita agora explica o menu.
+
+**Como conferi:** `npm test` 94 ok. `npm run e2e` ok, com checagens novas: abre em `vista` sem o botão Adicionar; tocar na mesa no Mover planta não abre o painel e mostra a dica. A parte do computador aperta `1` antes de clicar.
+
 ## 03/10/2026 — menu de modos: Editar · Mover cômodo · Mover planta
 
 Pedido do Rafael: "quero opção de alternar entre modo de edição do cômodo ou objeto, modo de arrastar o cômodo e modo de arrastar o plano para eu ver, coloque um menu fácil para isso, e publique no git".

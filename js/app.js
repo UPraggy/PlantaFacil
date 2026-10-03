@@ -12,8 +12,9 @@
   const hist = { pilha: [], i: -1 };
   const ptrs = new Map();
   // O que o dedo faz na planta: 'editar' (toca e edita, arrasta o objeto), 'comodo' (arrasta o cômodo com tudo dentro)
-  // ou 'vista' (só mexe a vista). Fica na memória da aba; abrir o app sempre começa em Editar.
-  let modo = 'editar';
+  // ou 'vista' (só mexe a vista). Regra do Rafael: nada se mexe nem se edita sem escolher o modo, então o app
+  // sempre abre em 'vista' (não é salvo). Adicionar também só existe no Editar.
+  let modo = 'vista';
   let gesto = null, quadro = 0, tAviso = 0, tVista = 0, tFalha = 0, tCiclo = 0, imaAntes = false, andarNovo = null, ultimoToque = null;
 
   // ---------- movimento ----------
@@ -604,6 +605,13 @@
         if (prox && prox !== selId) selecionar(prox);
       }, 330);
     }
+    if (toque && modo !== 'editar') {
+      tCiclo = setTimeout(() => {
+        const q = plano(p.x, p.y), i = itemEm(q.x, q.y);
+        if (modo === 'vista' && i) dicaModo('Para mexer, escolha “Editar” ou “Mover cômodo” no alto.');
+        else if (modo === 'comodo' && g.tipo === 'moverComodo') dicaModo('Arraste para mover o cômodo. Para editar, toque em “Editar” no alto.');
+      }, 330);
+    }
     if (g.tipo === 'pan') {
       if (g.moveu) salvar();
       else if (toque && g.comodoNoToque) { selecionar(g.comodoNoToque); requestAnimationFrame(() => { medirPalco(); enquadrarSelecao(); }); }
@@ -660,6 +668,25 @@
     comodo: 'Mover cômodo: arraste o cômodo e tudo que está dentro vai junto.',
     vista: 'Mover planta: arraste para olhar. Nada sai do lugar.',
   };
+  let tDicaModo = 0;
+  function dicaModo(msg) {
+    if (Date.now() - tDicaModo < 4000) return;
+    tDicaModo = Date.now();
+    pulsarModos();
+    aviso(msg);
+  }
+  // chama a atenção para o menu de modos (sem animação com "reduzir movimento")
+  function pulsarModos() {
+    if (reduzir) return;
+    const el = $('modos');
+    el.classList.remove('chamar'); void el.offsetWidth; el.classList.add('chamar');
+  }
+  // adicionar é edição: fora do Editar, o botão some e a tecla N só explica
+  function podeAdicionar() {
+    if (proj.config.travado) { avisoTravado(null); return false; }
+    if (modo !== 'editar') { dicaModo('Para adicionar, toque em “Editar” no alto.'); return false; }
+    return true;
+  }
   function definirModo(m, calado) {
     if (!AVISO_MODO[m]) return;
     const trocou = m !== modo;
@@ -1337,8 +1364,9 @@
   });
 
   // ---------- botões e teclado ----------
-  $('btnAdd').addEventListener('click', () => menuAdicionar());
-  $('btnPrimeiro').addEventListener('click', () => { if (proj.config.travado) avisoTravado(null); else menuAdicionar('comodo'); });
+  $('btnAdd').addEventListener('click', () => { if (podeAdicionar()) menuAdicionar(); });
+  // projeto vazio: o botão grande é um pedido claro para criar, então ele mesmo liga o Editar
+  $('btnPrimeiro').addEventListener('click', () => { if (proj.config.travado) avisoTravado(null); else { definirModo('editar', true); menuAdicionar('comodo'); } });
   $('btnAjustar').addEventListener('click', () => irParaVista(calcularVista()));
   $('btnMais').addEventListener('click', () => zoomEm({ x: W / 2, y: H / 2 }, 1.5));
   $('btnMenos').addEventListener('click', () => zoomEm({ x: W / 2, y: H / 2 }, 1 / 1.5));
@@ -1366,7 +1394,7 @@
     else if (e.key === 'Escape') selecionar(null);
     else if (e.key === '+' || e.key === '=') zoomEm({ x: W / 2, y: H / 2 }, 1.5);
     else if (e.key === '-') zoomEm({ x: W / 2, y: H / 2 }, 1 / 1.5);
-    else if (k === 'n' && !mod) { e.preventDefault(); if (proj.config.travado) avisoTravado(null); else menuAdicionar(); }
+    else if (k === 'n' && !mod) { e.preventDefault(); if (podeAdicionar()) menuAdicionar(); }
     else if (k === 'r' && !mod && selId) { e.preventDefault(); girarSelecionado(); }
     else if (!mod && (e.key === '1' || e.key === '2' || e.key === '3')) definirModo(['editar', 'comodo', 'vista'][Number(e.key) - 1]);
     else if (e.key.startsWith('Arrow') && selId) {
@@ -1383,7 +1411,7 @@
   try { temaPref = localStorage.getItem('plantafacil:tema') || 'auto'; } catch (e) { temaPref = 'auto'; }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (temaPref === 'auto') definirTema('auto', false); });
   definirTema(temaPref, false);
-  definirModo('editar', true);
+  palco.dataset.modo = modo; definirModo(modo, true);
   const r0 = palco.getBoundingClientRect();
   if (r0.width > 10 && r0.height > 10) { W = r0.width; H = r0.height; }
   abrirProjeto(estado.atualId);
@@ -1395,7 +1423,7 @@
   try {
     if (!localStorage.getItem('plantafacil:dica')) {
       localStorage.setItem('plantafacil:dica', '1');
-      setTimeout(() => aviso('Dica: toque num cômodo ou item para editar. Arraste para mover, belisque ou use − + para ampliar.'), 900);
+      setTimeout(() => aviso('Dica: escolha no alto o que o dedo faz. “Editar” mexe nos cômodos e itens; “Mover planta” só olha.'), 900);
     }
   } catch (e) { /* sem armazenamento */ }
 })();

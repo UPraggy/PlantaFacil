@@ -120,6 +120,10 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 #modos button[aria-checked='true'] { background: var(--btn); color: var(--btn-fg); }
 #modos button[aria-checked='true'] .ic { transform: scale(1.1); }
 #modos button:active:not([aria-checked='true']) { background: var(--bg3); }
+#modos.chamar { animation: chamar 700ms var(--ease-standard); }
+@keyframes chamar { 0%, 100% { box-shadow: 0 4px 14px rgba(0, 0, 0, .14); } 35% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--acento) 55%, transparent); } }
+/* Adicionar é edição: só aparece no Editar */
+#palco:not([data-modo='editar']) .fab { display: none; }
 #palco[data-modo='vista'] #tela { cursor: grab; }
 #palco[data-modo='vista'].arrastando-item #tela, #palco[data-modo='vista'] #tela:active { cursor: grabbing; }
 

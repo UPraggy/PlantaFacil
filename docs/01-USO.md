@@ -22,15 +22,16 @@ Para uma parede solta (uma divisória, por exemplo), escolha **Parede**, depois 
 
 ## 3. Mexer
 
-No alto da planta fica o menu **do que o dedo faz**. Toque numa das três opções (no computador, teclas `1`, `2` e `3`):
+No alto da planta fica o menu **do que o dedo faz**. Toque numa das três opções (no computador, teclas `1`, `2` e `3`).
+**Nada se mexe nem se edita sem escolher o modo:** o app sempre abre em **Mover planta** (só olhar), e o botão **Adicionar** só aparece no **Editar**.
 
 | Modo | O que acontece |
 |---|---|
-| ✏️ **Editar** (o normal) | Toque num cômodo ou objeto para abrir o painel e editar; arraste o objeto para mover; bolinhas mudam o tamanho. |
+| ✏️ **Editar** | Toque num cômodo ou objeto para abrir o painel e editar; arraste o objeto para mover; bolinhas mudam o tamanho. |
 | ✥ **Mover cômodo** | Arraste em qualquer lugar do cômodo (até em cima de um móvel) e **ele vai inteiro, com tudo o que está dentro**: móveis, paredes soltas, janelas e portas. Gruda nas bordas dos outros cômodos (ímã). |
 | ✋ **Mover planta** | Só para olhar: arrastar mexe a vista e nada sai do lugar. Dois dedos ampliam, como sempre. |
 
-Trocar para Mover cômodo ou Mover planta fecha o painel, para a planta ficar com a tela toda. Ao adicionar algo, o app volta sozinho para Editar. Com o painel aberto no celular, o menu encolhe para três ícones no canto de cima.
+Trocar para Mover cômodo ou Mover planta fecha o painel, para a planta ficar com a tela toda. Tocar num item fora do Editar não abre nada: aparece um aviso dizendo para escolher o modo, e o menu pisca. Num projeto vazio, o botão **Criar cômodo** já liga o Editar. Com o painel aberto no celular, o menu encolhe para três ícones no canto de cima.
 
 Ao tocar num item, abre o **painel** dele (embaixo no celular, à direita no computador). No celular ele abre compacto, com nome, medidas e ações; o botão **Ajustes** do painel mostra o resto (distâncias, cor, textura, mais opções).
 
