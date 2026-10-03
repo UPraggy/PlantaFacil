@@ -111,6 +111,18 @@ input[type='text']:focus { border-color: var(--acento); outline: none; box-shado
 .aviso-trava { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--acento) 45%, transparent);
   border-radius: 12px; background: color-mix(in srgb, var(--acento) 10%, transparent); color: var(--acento); font-size: 13.5px; animation: subir var(--motion-base) var(--ease-decelerate); }
 .aviso-trava .ic { width: 18px; height: 18px; }
+/* modos do dedo: Editar · Mover cômodo · Mover planta */
+#modos { position: absolute; top: 54px; left: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(372px, calc(100% - 20px));
+  padding: 3px; gap: 2px; background: color-mix(in srgb, var(--bg2) 94%, transparent); border: 1px solid var(--linha2); border-radius: 14px; box-shadow: 0 4px 14px rgba(0, 0, 0, .14); }
+#modos button { flex-direction: column; min-height: 50px; padding: 5px 4px 4px; gap: 3px; border: 0; border-radius: 11px; font: 500 12px/1.1 var(--display); color: var(--fg2); min-width: 0; }
+#modos button .ic { width: 19px; height: 19px; transition: transform var(--motion-base) var(--ease-spring); }
+#modos button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#modos button[aria-checked='true'] { background: var(--btn); color: var(--btn-fg); }
+#modos button[aria-checked='true'] .ic { transform: scale(1.1); }
+#modos button:active:not([aria-checked='true']) { background: var(--bg3); }
+#palco[data-modo='vista'] #tela { cursor: grab; }
+#palco[data-modo='vista'].arrastando-item #tela, #palco[data-modo='vista'] #tela:active { cursor: grabbing; }
+
 #palco.travado .fab { display: none; }
 #palco.travado #tela { cursor: grab; }
 .aberturas { display: grid; gap: 8px; }
@@ -277,6 +289,10 @@ body.arrastando::after {
   #app:has(#painel:not([hidden])) .fab { width: 52px; min-height: 52px; padding: 0; }
   #app:has(#painel:not([hidden])) .fab span, #app:has(#painel:not([hidden])) .escala { display: none; }
   #app:has(#painel:not([hidden])) #ver button:not(.trava) { display: none; }
+  /* com o painel aberto, o menu de modos vira só ícones na linha do Travar (a planta precisa da altura) */
+  #app:has(#painel:not([hidden])) #modos { top: 10px; left: auto; right: 10px; width: auto; grid-template-columns: repeat(3, 46px); }
+  #app:has(#painel:not([hidden])) #modos button { min-height: 36px; padding: 0; }
+  #app:has(#painel:not([hidden])) #modos button span { display: none; }
   #app:has(#painel:not([hidden])) ~ #aviso { top: calc(env(safe-area-inset-top) + 116px); bottom: auto; }
   .form-novo .nota-medidas { margin-top: -8px; }
 }

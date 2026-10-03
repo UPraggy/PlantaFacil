@@ -11,6 +11,9 @@
   let temaPref = 'auto', tema = DES.TEMAS.escuro;
   const hist = { pilha: [], i: -1 };
   const ptrs = new Map();
+  // O que o dedo faz na planta: 'editar' (toca e edita, arrasta o objeto), 'comodo' (arrasta o cômodo com tudo dentro)
+  // ou 'vista' (só mexe a vista). Fica na memória da aba; abrir o app sempre começa em Editar.
+  let modo = 'editar';
   let gesto = null, quadro = 0, tAviso = 0, tVista = 0, tFalha = 0, tCiclo = 0, imaAntes = false, andarNovo = null, ultimoToque = null;
 
   // ---------- movimento ----------
@@ -172,8 +175,9 @@
 
   // ---------- vista (pan e zoom) ----------
   // Margens em pixels em volta do que se enquadra: espaço das cotas em cadeia (esquerda e embaixo), dos totais
-  // (direita), das pílulas (alto) e do zoom / botão Adicionar (embaixo).
-  const MARGENS = { e: 96, d: 86, c: 82, b: 100 };
+  // (direita), das pílulas e do menu de modos (alto) e do zoom / botão Adicionar (embaixo).
+  // O alto se mede pelo menu de modos de verdade: no celular, com o painel aberto, ele encolhe para a linha do "Travar".
+  const margens = () => { const md = $('modos'); return { e: 96, d: 86, c: Math.max(82, md.offsetTop + md.offsetHeight + 12), b: 100 }; };
   function vistaPara(b, pad, zMax) {
     const m = typeof pad === 'number' ? { e: pad, d: pad, c: pad, b: pad } : pad;
     const lw = Math.max(40, W - m.e - m.d), lh = Math.max(40, H - m.c - m.b);
@@ -182,7 +186,7 @@
   }
   function calcularVista() {
     const c = DES.caixa(andar.itens);
-    return c ? vistaPara(c, MARGENS, 4) : vistaPara({ x: 0, y: 0, w: 800, h: 560 }, 44, 10);
+    return c ? vistaPara(c, margens(), 4) : vistaPara({ x: 0, y: 0, w: 800, h: 560 }, 44, 10);
   }
   // Deixa o selecionado (e as cotas dele, que ficam em volta do recipiente) inteiro na tela:
   // se não cabe, enquadra; se só está para fora, desliza o mínimo. Nunca durante um arrasto.
@@ -191,7 +195,7 @@
     const i = itemSel();
     if (!i) return;
     if (ptrs.size) { enquadrarDepois = true; return; }
-    const c = DES.recipiente(i, andar.itens), alvo = DES.limites(c || i), v = andar.vista, m = MARGENS;
+    const c = DES.recipiente(i, andar.itens), alvo = DES.limites(c || i), v = andar.vista, m = margens();
     const l = alvo.x * v.z + v.tx, t = alvo.y * v.z + v.ty, r = l + alvo.w * v.z, b = t + alvo.h * v.z;
     if (l >= m.e - 1 && r <= W - m.d + 1 && t >= m.c - 1 && b <= H - m.b + 1) return;
     if (alvo.w * v.z > W - m.e - m.d || alvo.h * v.z > H - m.c - m.b) { irParaVista(vistaPara(alvo, m, Math.max(v.z, 0.05))); return; }
@@ -363,6 +367,14 @@
     }
     return achados;
   }
+  // Modo "Mover cômodo": o menor cômodo sob o ponto, contando as paredes (o que está dentro não atrapalha).
+  function comodoEm(px, py) {
+    return andar.itens.filter(i => {
+      if (i.tipo !== 'comodo') return false;
+      const b = DES.limites(i);
+      return px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h;
+    }).sort((a, b) => a.w * a.h - b.w * b.h)[0] || null;
+  }
   const travado = i => !!(proj.config.travado || (i && i.travado));
   let tAvisoTrava = 0;
   function avisoTravado(i) {
@@ -412,6 +424,13 @@
   function passar(e) {
     const p = posTela(e), sel = itemSel();
     let cursor = 'default', alvo = null;
+    if (modo !== 'editar') {
+      const q = plano(p.x, p.y), c = modo === 'comodo' ? comodoEm(q.x, q.y) : null;
+      if (c) { cursor = travado(c) ? 'pointer' : 'move'; alvo = c.id; } else cursor = 'grab';
+      if (tela.style.cursor !== cursor) tela.style.cursor = cursor;
+      if (alvo !== hoverId) { hoverId = alvo; agendar(); }
+      return;
+    }
     const al = sel && !travado(sel) && alcaProxima(sel, p);
     if (al) cursor = al.hx && al.hy ? (al.hx * al.hy > 0 ? 'nwse-resize' : 'nesw-resize') : (al.hx ? 'ew-resize' : 'ns-resize');
     else {
@@ -445,9 +464,19 @@
     if (ptrs.size > 2) return;
     const v = andar.vista;
     imaAntes = false;
-    if (e.button === 1) { gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false }; return; }
-    const sel = itemSel();
+    if (e.button === 1 || modo === 'vista') { gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false }; return; }
     const q = plano(p.x, p.y);
+    if (modo === 'comodo') {
+      const c = comodoEm(q.x, q.y);
+      if (!c) { gesto = { tipo: 'pan', ini: p, v0: { tx: v.tx, ty: v.ty }, moveu: false }; return; }
+      hoverId = c.id; agendar();
+      gesto = travado(c)
+        ? { tipo: 'travado', id: c.id, ini: p, moveu: false }
+        : { tipo: 'moverComodo', id: c.id, orig: { x: c.x, y: c.y }, ini: p, moveu: false,
+          junto: DES.dentroDoComodo(c, andar.itens).map(o => ({ item: o, x: o.x, y: o.y })) };
+      return;
+    }
+    const sel = itemSel();
     if (sel && !travado(sel)) {
       const al = alcaProxima(sel, p);
       if (al) {
@@ -529,6 +558,23 @@
       }
       i.x = L; i.y = T; i.w = R - L; i.h = B - T;
       montarGuias(i.x, i.y, i.w, i.h, gx, gy, outros);
+    } else if (gesto.tipo === 'moverComodo') {
+      if (!gesto.moveu && Math.hypot(p.x - gesto.ini.x, p.y - gesto.ini.y) < 4) return;
+      if (!gesto.moveu) palco.classList.add('arrastando-item');
+      gesto.moveu = true;
+      const fixos = outros.filter(o => !gesto.junto.some(j => j.item === o)); // o ímã só olha o que fica parado
+      let nx = sn(gesto.orig.x + (p.x - gesto.ini.x) / v.z), ny = sn(gesto.orig.y + (p.y - gesto.ini.y) / v.z);
+      let gx = null, gy = null;
+      if (proj.config.ima) {
+        const ax = alinhar(bordasX(Object.assign({}, i, { x: nx })), fixos.flatMap(bordasX), lim);
+        const ay = alinhar(bordasY(Object.assign({}, i, { y: ny })), fixos.flatMap(bordasY), lim);
+        if (ax) { nx += ax.d; gx = ax.alvo; }
+        if (ay) { ny += ay.d; gy = ay.alvo; }
+      }
+      const dx = nx - gesto.orig.x, dy = ny - gesto.orig.y;
+      i.x = nx; i.y = ny;
+      for (const j of gesto.junto) { j.item.x = j.x + dx; j.item.y = j.y + dy; }
+      montarGuias(nx, ny, i.w, i.h, gx, gy, fixos);
     }
     atualizarPainel();
     agendar();
@@ -545,9 +591,10 @@
     }
     gesto = null; guias = []; imaAntes = false;
     palco.classList.remove('arrastando-item');
+    if (modo === 'comodo' && e.pointerType !== 'mouse') hoverId = null; // no mouse o realce segue o cursor
     if (enquadrarDepois) { enquadrarDepois = false; setTimeout(enquadrarSelecao, 0); }
     if (!g) return;
-    const toque = e.type === 'pointerup' && !g.moveu && (g.tipo === 'pan' || g.tipo === 'mover' || g.tipo === 'travado');
+    const toque = e.type === 'pointerup' && !g.moveu && (g.tipo === 'pan' || g.tipo === 'mover' || g.tipo === 'travado' || g.tipo === 'moverComodo');
     clearTimeout(tCiclo);
     if (toque && toqueDuplo(p, g.tipo === 'pan' ? null : g.id)) { agendar(); return; }
     if (toque && g.ciclo) {
@@ -561,8 +608,9 @@
       if (g.moveu) salvar();
       else if (toque && g.comodoNoToque) { selecionar(g.comodoNoToque); requestAnimationFrame(() => { medirPalco(); enquadrarSelecao(); }); }
       else if (toque && !g.toque && selId) selecionar(null);
-    } else if ((g.tipo === 'mover' || g.tipo === 'redim') && g.moveu) {
+    } else if ((g.tipo === 'mover' || g.tipo === 'redim' || g.tipo === 'moverComodo') && g.moveu) {
       commit();
+      if (g.tipo === 'moverComodo' && g.junto.length) vibrar(8);
     } else if (g.tipo === 'pinca' || g.tipo === 'espera') {
       salvar();
     }
@@ -573,9 +621,10 @@
   tela.addEventListener('pointercancel', fimGesto);
 
   function iniciarPinca() {
-    if (gesto && (gesto.tipo === 'mover' || gesto.tipo === 'redim') && gesto.moveu) {
+    if (gesto && (gesto.tipo === 'mover' || gesto.tipo === 'redim' || gesto.tipo === 'moverComodo') && gesto.moveu) {
       const i = itemPorId(gesto.id);
       if (i) Object.assign(i, gesto.orig);
+      if (gesto.junto) for (const j of gesto.junto) { j.item.x = j.x; j.item.y = j.y; }
       atualizarPainel();
     }
     const [a, b] = [...ptrs.values()], v = andar.vista;
@@ -604,6 +653,39 @@
     clearTimeout(tVista);
     tVista = setTimeout(salvar, 500);
   }, { passive: false });
+
+  // ---------- modos: Editar · Mover cômodo · Mover planta ----------
+  const AVISO_MODO = {
+    editar: 'Editar: toque num cômodo ou objeto para editar; arraste para mover.',
+    comodo: 'Mover cômodo: arraste o cômodo e tudo que está dentro vai junto.',
+    vista: 'Mover planta: arraste para olhar. Nada sai do lugar.',
+  };
+  function definirModo(m, calado) {
+    if (!AVISO_MODO[m]) return;
+    const trocou = m !== modo;
+    modo = m;
+    palco.dataset.modo = m;
+    document.querySelectorAll('#modos [data-modo]').forEach(b => {
+      const ativo = b.dataset.modo === m;
+      b.setAttribute('aria-checked', String(ativo));
+      b.tabIndex = ativo ? 0 : -1;
+    });
+    if (!trocou) return;
+    hoverId = null; tela.style.cursor = '';
+    if (m !== 'editar' && selId) selecionar(null); // fecha o painel: a planta fica com a tela toda
+    vibrar(8); agendar();
+    if (!calado) aviso(AVISO_MODO[m]);
+  }
+  document.querySelectorAll('#modos [data-modo]').forEach(b => b.addEventListener('click', () => definirModo(b.dataset.modo)));
+  // setas do teclado andam entre os modos, como num grupo de rádio
+  $('modos').addEventListener('keydown', e => {
+    const ordem = ['editar', 'comodo', 'vista'], k = ordem.indexOf(modo);
+    const passo = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!passo) return;
+    e.preventDefault(); e.stopPropagation();
+    definirModo(ordem[(k + passo + 3) % 3]);
+    $('modos').querySelector(`[data-modo=${modo}]`).focus();
+  });
 
   // ---------- painel do item selecionado ----------
   const P = { nome: $('pNome'), w: $('pW'), h: $('pH') };
@@ -1024,6 +1106,7 @@
       const novo = D.novoItem(spec, centro.x, centro.y, andar.itens, proj.config.encaixe);
       andar.itens.push(novo);
       fecharModal();
+      definirModo('editar', true); // o item novo já vem selecionado para editar
       selId = novo.id;
       entrar([novo.id]); pulsar(novo.id);
       commit(); atualizarPainel();
@@ -1285,6 +1368,7 @@
     else if (e.key === '-') zoomEm({ x: W / 2, y: H / 2 }, 1 / 1.5);
     else if (k === 'n' && !mod) { e.preventDefault(); if (proj.config.travado) avisoTravado(null); else menuAdicionar(); }
     else if (k === 'r' && !mod && selId) { e.preventDefault(); girarSelecionado(); }
+    else if (!mod && (e.key === '1' || e.key === '2' || e.key === '3')) definirModo(['editar', 'comodo', 'vista'][Number(e.key) - 1]);
     else if (e.key.startsWith('Arrow') && selId) {
       e.preventDefault();
       if (travado(itemSel())) { tremer(selId); avisoTravado(itemSel()); return; }
@@ -1299,6 +1383,7 @@
   try { temaPref = localStorage.getItem('plantafacil:tema') || 'auto'; } catch (e) { temaPref = 'auto'; }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (temaPref === 'auto') definirTema('auto', false); });
   definirTema(temaPref, false);
+  definirModo('editar', true);
   const r0 = palco.getBoundingClientRect();
   if (r0.width > 10 && r0.height > 10) { W = r0.width; H = r0.height; }
   abrirProjeto(estado.atualId);
